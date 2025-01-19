@@ -1,0 +1,3 @@
+D:\KULIAH PTI ANGKATAN 22/1. KELAS/SEMESTER 2/1. KULIAH/2.3. Praktik Struktur Data (Bu Aksin)/16. projek akhir/data bank/data.pickle
+
+kudu ono file data.pickle nek ora ragelem mlaku program e
