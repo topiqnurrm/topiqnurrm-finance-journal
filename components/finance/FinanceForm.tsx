@@ -1,18 +1,19 @@
 "use client";
- 
+
 import { useState } from "react";
 import { useFinance } from "@/lib/hooks/useFinance";
 import { EXPENSE_CATEGORIES, ExpenseCategory, TransactionType } from "@/lib/types/finance";
- 
+import { getLocalDateStr } from "@/lib/utils/date";
+
 export default function FinanceForm() {
   const { addTransaction } = useFinance();
   const [type, setType] = useState<TransactionType>("expense");
   const [category, setCategory] = useState<ExpenseCategory>("kehidupan");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(getLocalDateStr());
   const [submitting, setSubmitting] = useState(false);
- 
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!amount) return;
@@ -29,7 +30,7 @@ export default function FinanceForm() {
     setNote("");
     setSubmitting(false);
   }
- 
+
   return (
     <form onSubmit={handleSubmit} className="space-y-3 rounded-lg border border-neutral-800 p-4">
       <div className="flex gap-2">
@@ -52,7 +53,7 @@ export default function FinanceForm() {
           Pemasukan
         </button>
       </div>
- 
+
       {type === "expense" && (
         <select
           value={category}
@@ -66,7 +67,7 @@ export default function FinanceForm() {
           ))}
         </select>
       )}
- 
+
       <input
         type="number"
         placeholder="Jumlah (Rp)"
@@ -75,7 +76,7 @@ export default function FinanceForm() {
         className="w-full rounded-md bg-neutral-800 p-2 text-sm"
         required
       />
- 
+
       <input
         type="text"
         placeholder="Catatan (opsional)"
@@ -83,14 +84,14 @@ export default function FinanceForm() {
         onChange={(e) => setNote(e.target.value)}
         className="w-full rounded-md bg-neutral-800 p-2 text-sm"
       />
- 
+
       <input
         type="date"
         value={date}
         onChange={(e) => setDate(e.target.value)}
         className="w-full rounded-md bg-neutral-800 p-2 text-sm"
       />
- 
+
       <button
         type="submit"
         disabled={submitting}

@@ -1,17 +1,18 @@
 "use client";
- 
+
 import { useState } from "react";
 import { useJournal } from "@/lib/hooks/useJournal";
 import CategoryPicker from "./CategoryPicker";
- 
+import { getLocalDateStr } from "@/lib/utils/date";
+
 export default function JournalForm() {
   const { categories, addEntry, addCategory } = useJournal();
   const [categoryId, setCategoryId] = useState("");
   const [categoryName, setCategoryName] = useState("");
   const [content, setContent] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(getLocalDateStr());
   const [submitting, setSubmitting] = useState(false);
- 
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!categoryId || !content.trim()) return;
@@ -26,7 +27,7 @@ export default function JournalForm() {
     setContent("");
     setSubmitting(false);
   }
- 
+
   return (
     <form onSubmit={handleSubmit} className="space-y-3 rounded-lg border border-neutral-800 p-4">
       <CategoryPicker
@@ -38,7 +39,7 @@ export default function JournalForm() {
         }}
         onAddCategory={addCategory}
       />
- 
+
       <textarea
         placeholder="Tulis jurnal..."
         value={content}
@@ -47,14 +48,14 @@ export default function JournalForm() {
         className="w-full rounded-md bg-neutral-800 p-2 text-sm"
         required
       />
- 
+
       <input
         type="date"
         value={date}
         onChange={(e) => setDate(e.target.value)}
         className="w-full rounded-md bg-neutral-800 p-2 text-sm"
       />
- 
+
       <button
         type="submit"
         disabled={submitting || !categoryId}
