@@ -1,9 +1,12 @@
+import { Budget } from "@/lib/types/finance";
 import {
   collection,
   addDoc,
   updateDoc,
   deleteDoc,
   doc,
+  getDoc,
+  setDoc,
   query,
   orderBy,
   onSnapshot,
@@ -12,7 +15,6 @@ import {
   DocumentData,
 } from "firebase/firestore";
 import { db } from "./config";
- 
 export function subscribeToCollection<T>(
   collectionName: string,
   callback: (items: (T & { id: string })[]) => void,
@@ -49,4 +51,14 @@ export async function updateItem<T extends object>(
  
 export async function deleteItem(collectionName: string, id: string) {
   return deleteDoc(doc(db, collectionName, id));
+}
+ 
+export async function getBudget(monthId: string): Promise<Budget | null> {
+  const snap = await getDoc(doc(db, "budgets", monthId));
+  if (!snap.exists()) return null;
+  return { id: snap.id, ...snap.data() } as Budget;
+}
+ 
+export async function setBudget(monthId: string, data: Omit<Budget, "id">) {
+  await setDoc(doc(db, "budgets", monthId), data, { merge: true });
 }
