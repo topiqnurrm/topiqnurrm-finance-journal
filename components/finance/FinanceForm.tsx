@@ -1,12 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useFinance } from "@/lib/hooks/useFinance";
-import { EXPENSE_CATEGORIES, ExpenseCategory, TransactionType } from "@/lib/types/finance";
+import { EXPENSE_CATEGORIES, ExpenseCategory, Transaction, TransactionType } from "@/lib/types/finance";
 import { getLocalDateStr } from "@/lib/utils/date";
 
-export default function FinanceForm() {
-  const { addTransaction } = useFinance();
+type EditableTransaction = Transaction & { id: string };
+
+interface Props {
+  editingTransaction?: EditableTransaction | null;
+  onCancelEdit?: () => void;
+  onSavedEdit?: () => void;
+}
+
+export default function FinanceForm({ editingTransaction, onCancelEdit, onSavedEdit }: Props) {
+  const { addTransaction, editTransaction } = useFinance();
   const [type, setType] = useState<TransactionType>("expense");
   const [category, setCategory] = useState<ExpenseCategory>("kehidupan");
   const [amount, setAmount] = useState("");
@@ -14,25 +22,58 @@ export default function FinanceForm() {
   const [date, setDate] = useState(getLocalDateStr());
   const [submitting, setSubmitting] = useState(false);
 
+  const isEditing = !!editingTransaction;
+
+  // Isi form otomatis saat item edit dipilih, dan reset saat dibatalkan/selesai
+  useEffect(() => {
+    if (editingTransaction) {
+      setType(editingTransaction.type);
+      setCategory((editingTransaction.category as ExpenseCategory) || "kehidupan");
+      setAmount(String(editingTransaction.amount));
+      setNote(editingTransaction.note || "");
+      setDate(editingTransaction.date);
+    } else {
+      setType("expense");
+      setCategory("kehidupan");
+      setAmount("");
+      setNote("");
+      setDate(getLocalDateStr());
+    }
+  }, [editingTransaction]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!amount) return;
     setSubmitting(true);
-    await addTransaction({
+
+    const payload = {
       type,
       category: type === "expense" ? category : null,
       amount: parseInt(amount, 10),
       note,
       date,
-      createdAt: Date.now(),
-    });
-    setAmount("");
-    setNote("");
+    };
+
+    if (isEditing && editingTransaction) {
+      await editTransaction(editingTransaction.id, payload);
+      onSavedEdit?.();
+    } else {
+      await addTransaction({ ...payload, createdAt: Date.now() });
+      setAmount("");
+      setNote("");
+    }
+
     setSubmitting(false);
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3 rounded-lg border border-neutral-800 p-4">
+      {isEditing && (
+        <p className="text-xs text-blue-400">
+          Mengedit transaksi tanggal {editingTransaction?.date}
+        </p>
+      )}
+
       <div className="flex gap-2">
         <button
           type="button"
@@ -92,13 +133,24 @@ export default function FinanceForm() {
         className="w-full rounded-md bg-neutral-800 p-2 text-sm"
       />
 
-      <button
-        type="submit"
-        disabled={submitting}
-        className="w-full rounded-md bg-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
-      >
-        {submitting ? "Menyimpan..." : "Simpan"}
-      </button>
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={submitting}
+          className="flex-1 rounded-md bg-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+        >
+          {submitting ? "Menyimpan..." : "Simpan"}
+        </button>
+        {isEditing && (
+          <button
+            type="button"
+            onClick={() => onCancelEdit?.()}
+            className="flex-1 rounded-md bg-neutral-700 py-2 text-sm font-medium text-white"
+          >
+            Batal
+          </button>
+        )}
+      </div>
     </form>
   );
 }

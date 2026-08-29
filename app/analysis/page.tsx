@@ -48,40 +48,41 @@ export default function AnalysisPage() {
 
   return (
     <div className="max-w-2xl mx-auto p-4 space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <BackButton />
-          <h1 className="text-xl font-semibold text-white">Analisis</h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setMonthId((m) => shiftMonth(m, -1))}
-            className="px-3 py-1 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-white"
-            aria-label="Bulan sebelumnya"
-          >
-            ‹
-          </button>
-          <span className="text-sm text-neutral-300 w-32 text-center capitalize">
-            {formatMonthLabel(monthId)}
-          </span>
-          <button
-            onClick={() => setMonthId((m) => shiftMonth(m, 1))}
-            disabled={isCurrentMonth}
-            className="px-3 py-1 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-white disabled:opacity-30 disabled:cursor-not-allowed"
-            aria-label="Bulan berikutnya"
-          >
-            ›
-          </button>
-        </div>
+      <div className="flex items-center gap-3">
+        <BackButton />
+        <h1 className="text-xl font-semibold text-white">Analisis</h1>
+      </div>
+
+      <div className="flex items-center justify-center gap-2">
+        <button
+          onClick={() => setMonthId((m) => shiftMonth(m, -1))}
+          className="px-3 py-1 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-white"
+          aria-label="Bulan sebelumnya"
+        >
+          ‹
+        </button>
+        <span className="text-sm text-neutral-300 w-32 text-center capitalize">
+          {formatMonthLabel(monthId)}
+        </span>
+        <button
+          onClick={() => setMonthId((m) => shiftMonth(m, 1))}
+          disabled={isCurrentMonth}
+          className="px-3 py-1 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-white disabled:opacity-30 disabled:cursor-not-allowed"
+          aria-label="Bulan berikutnya"
+        >
+          ›
+        </button>
       </div>
 
       {!isCurrentMonth && (
-        <button
-          onClick={() => setMonthId(getCurrentMonthId())}
-          className="text-xs text-blue-400 hover:text-blue-300"
-        >
-          ← Kembali ke bulan ini
-        </button>
+        <div className="text-center">
+          <button
+            onClick={() => setMonthId(getCurrentMonthId())}
+            className="text-xs text-blue-400 hover:text-blue-300"
+          >
+            ← Kembali ke bulan ini
+          </button>
+        </div>
       )}
 
       <div className="grid grid-cols-2 gap-4">

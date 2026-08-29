@@ -1,13 +1,18 @@
 "use client";
 
+import { useState } from "react";
 import { useAuth } from "@/lib/hooks/useAuth";
 import FinanceForm from "@/components/finance/FinanceForm";
 import FinanceList from "@/components/finance/FinanceList";
 import FinanceSummaryCard from "@/components/finance/FinanceSummaryCard";
 import BackButton from "@/components/ui/BackButton";
+import { Transaction } from "@/lib/types/finance";
+
+type EditableTransaction = Transaction & { id: string };
 
 export default function FinancePage() {
   const { isOwner } = useAuth();
+  const [editingTransaction, setEditingTransaction] = useState<EditableTransaction | null>(null);
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 p-4">
@@ -16,8 +21,18 @@ export default function FinancePage() {
         <h1 className="text-xl font-semibold">Keuangan</h1>
       </div>
       <FinanceSummaryCard />
-      {isOwner && <FinanceForm />}
-      <FinanceList isOwner={isOwner} />
+      {isOwner && (
+        <FinanceForm
+          editingTransaction={editingTransaction}
+          onCancelEdit={() => setEditingTransaction(null)}
+          onSavedEdit={() => setEditingTransaction(null)}
+        />
+      )}
+      <FinanceList
+        isOwner={isOwner}
+        onEdit={isOwner ? setEditingTransaction : undefined}
+        editingId={editingTransaction?.id ?? null}
+      />
     </div>
   );
 }

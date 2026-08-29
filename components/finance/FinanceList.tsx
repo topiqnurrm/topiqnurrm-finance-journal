@@ -3,11 +3,19 @@
 import { useState } from "react";
 import { useFinance } from "@/lib/hooks/useFinance";
 import { formatRupiah } from "@/lib/utils/currency";
-import { EXPENSE_CATEGORIES } from "@/lib/types/finance";
+import { EXPENSE_CATEGORIES, Transaction } from "@/lib/types/finance";
 
 const PAGE_SIZE = 50;
 
-export default function FinanceList({ isOwner }: { isOwner: boolean }) {
+type EditableTransaction = Transaction & { id: string };
+
+interface Props {
+  isOwner: boolean;
+  onEdit?: (t: EditableTransaction) => void;
+  editingId?: string | null;
+}
+
+export default function FinanceList({ isOwner, onEdit, editingId }: Props) {
   const { transactions, loading, removeTransaction } = useFinance();
   const [page, setPage] = useState(0);
 
@@ -27,10 +35,13 @@ export default function FinanceList({ isOwner }: { isOwner: boolean }) {
       <div className="space-y-2">
         {paginated.map((t) => {
           const categoryLabel = EXPENSE_CATEGORIES.find((c) => c.value === t.category)?.label;
+          const isBeingEdited = editingId === t.id;
           return (
             <div
               key={t.id}
-              className="flex items-center justify-between rounded-md border border-neutral-800 p-3"
+              className={`flex items-center justify-between rounded-md border p-3 ${
+                isBeingEdited ? "border-blue-500 bg-neutral-900" : "border-neutral-800"
+              }`}
             >
               <div>
                 <p className="text-sm font-medium">
@@ -49,6 +60,14 @@ export default function FinanceList({ isOwner }: { isOwner: boolean }) {
                   {t.type === "income" ? "+" : "-"}
                   {formatRupiah(t.amount)}
                 </span>
+                {isOwner && onEdit && (
+                  <button
+                    onClick={() => onEdit(t)}
+                    className="text-xs text-neutral-500 hover:text-blue-400"
+                  >
+                    Edit
+                  </button>
+                )}
                 {isOwner && (
                   <button
                     onClick={() => t.id && removeTransaction(t.id)}
