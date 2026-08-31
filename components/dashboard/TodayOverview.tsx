@@ -55,7 +55,7 @@ export default function TodayOverview() {
           value={selectedDate}
           max={today}
           onChange={(e) => setSelectedDate(e.target.value)}
-          className="flex-1 bg-neutral-800 rounded-lg px-3 py-2 text-sm text-white"
+          className="flex-1 min-w-0 bg-neutral-800 rounded-lg px-3 py-2 text-sm text-white"
         />
         {!isToday && (
           <button
@@ -107,9 +107,9 @@ export default function TodayOverview() {
         {dayTx.length === 0 ? (
           <p className="text-sm text-neutral-600">Belum ada transaksi di tanggal ini.</p>
         ) : (
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             {dayTx.slice(0, 5).map((t) => (
-              <div key={t.id} className="flex justify-between text-sm">
+              <div key={t.id} className="border-l-2 border-neutral-700 pl-3 flex justify-between text-sm">
                 <span className="text-neutral-400">{t.note || t.category || "Pemasukan"}</span>
                 <span className={t.type === "income" ? "text-green-500" : "text-red-500"}>
                   {t.type === "income" ? "+" : "-"}
