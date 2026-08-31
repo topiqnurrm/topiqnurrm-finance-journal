@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useJournal } from "@/lib/hooks/useJournal";
 import { JournalEntry } from "@/lib/types/journal";
 
@@ -10,21 +10,29 @@ type EditableEntry = JournalEntry & { id: string };
 
 interface Props {
   isOwner: boolean;
+  selectedDate: string;
   onEdit?: (entry: EditableEntry) => void;
   editingId?: string | null;
 }
 
-export default function JournalList({ isOwner, onEdit, editingId }: Props) {
+export default function JournalList({ isOwner, selectedDate, onEdit, editingId }: Props) {
   const { entries, loading, removeEntry } = useJournal();
   const [page, setPage] = useState(0);
 
-  if (loading) return <p className="text-sm text-neutral-500">Memuat...</p>;
-  if (entries.length === 0)
-    return <p className="text-sm text-neutral-500">Belum ada jurnal.</p>;
+  useEffect(() => {
+    setPage(0);
+  }, [selectedDate]);
 
-  const totalPages = Math.max(1, Math.ceil(entries.length / PAGE_SIZE));
+  if (loading) return <p className="text-sm text-neutral-500">Memuat...</p>;
+
+  const dayEntries = entries.filter((e) => e.date === selectedDate);
+
+  if (dayEntries.length === 0)
+    return <p className="text-sm text-neutral-500">Belum ada jurnal di tanggal ini.</p>;
+
+  const totalPages = Math.max(1, Math.ceil(dayEntries.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages - 1);
-  const paginated = entries.slice(currentPage * PAGE_SIZE, currentPage * PAGE_SIZE + PAGE_SIZE);
+  const paginated = dayEntries.slice(currentPage * PAGE_SIZE, currentPage * PAGE_SIZE + PAGE_SIZE);
 
   return (
     <div className="space-y-3">
@@ -78,7 +86,7 @@ export default function JournalList({ isOwner, onEdit, editingId }: Props) {
             ‹ Sebelumnya
           </button>
           <span className="text-xs text-neutral-500">
-            Halaman {currentPage + 1} dari {totalPages} · {entries.length} jurnal
+            Halaman {currentPage + 1} dari {totalPages} · {dayEntries.length} jurnal
           </span>
           <button
             onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}

@@ -5,13 +5,16 @@ import { useAuth } from "@/lib/hooks/useAuth";
 import JournalForm from "@/components/journal/JournalForm";
 import JournalList from "@/components/journal/JournalList";
 import BackButton from "@/components/ui/BackButton";
+import DayNav from "@/components/ui/DayNav";
 import { JournalEntry } from "@/lib/types/journal";
+import { getLocalDateStr } from "@/lib/utils/date";
 
 type EditableEntry = JournalEntry & { id: string };
 
 export default function JournalPage() {
   const { isOwner } = useAuth();
   const [editingEntry, setEditingEntry] = useState<EditableEntry | null>(null);
+  const [selectedDate, setSelectedDate] = useState(getLocalDateStr());
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 p-4">
@@ -26,8 +29,12 @@ export default function JournalPage() {
           onSavedEdit={() => setEditingEntry(null)}
         />
       )}
+
+      <DayNav selectedDate={selectedDate} onChange={setSelectedDate} />
+
       <JournalList
         isOwner={isOwner}
+        selectedDate={selectedDate}
         onEdit={isOwner ? setEditingEntry : undefined}
         editingId={editingEntry?.id ?? null}
       />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useFinance } from "@/lib/hooks/useFinance";
 import { formatRupiah } from "@/lib/utils/currency";
 import { EXPENSE_CATEGORIES, Transaction } from "@/lib/types/finance";
@@ -11,21 +11,29 @@ type EditableTransaction = Transaction & { id: string };
 
 interface Props {
   isOwner: boolean;
+  selectedDate: string;
   onEdit?: (t: EditableTransaction) => void;
   editingId?: string | null;
 }
 
-export default function FinanceList({ isOwner, onEdit, editingId }: Props) {
+export default function FinanceList({ isOwner, selectedDate, onEdit, editingId }: Props) {
   const { transactions, loading, removeTransaction } = useFinance();
   const [page, setPage] = useState(0);
 
-  if (loading) return <p className="text-sm text-neutral-500">Memuat...</p>;
-  if (transactions.length === 0)
-    return <p className="text-sm text-neutral-500">Belum ada transaksi.</p>;
+  useEffect(() => {
+    setPage(0);
+  }, [selectedDate]);
 
-  const totalPages = Math.max(1, Math.ceil(transactions.length / PAGE_SIZE));
+  if (loading) return <p className="text-sm text-neutral-500">Memuat...</p>;
+
+  const dayTransactions = transactions.filter((t) => t.date === selectedDate);
+
+  if (dayTransactions.length === 0)
+    return <p className="text-sm text-neutral-500">Belum ada transaksi di tanggal ini.</p>;
+
+  const totalPages = Math.max(1, Math.ceil(dayTransactions.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages - 1);
-  const paginated = transactions.slice(
+  const paginated = dayTransactions.slice(
     currentPage * PAGE_SIZE,
     currentPage * PAGE_SIZE + PAGE_SIZE
   );
@@ -92,7 +100,7 @@ export default function FinanceList({ isOwner, onEdit, editingId }: Props) {
             ‹ Sebelumnya
           </button>
           <span className="text-xs text-neutral-500">
-            Halaman {currentPage + 1} dari {totalPages} · {transactions.length} transaksi
+            Halaman {currentPage + 1} dari {totalPages} · {dayTransactions.length} transaksi
           </span>
           <button
             onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}

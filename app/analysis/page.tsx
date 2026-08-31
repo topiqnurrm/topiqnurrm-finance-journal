@@ -42,7 +42,8 @@ export default function AnalysisPage() {
   const totalBudgetAllocated = budget
     ? budget.kehidupan + budget.mendadak + budget.tabungan + budget.foya_foya
     : 0;
-  const sisa = totalIncome - totalBudgetAllocated;
+  const sisaBudget = totalIncome - totalBudgetAllocated;
+  const sisaUang = totalIncome - totalExpense;
 
   const isCurrentMonth = monthId === getCurrentMonthId();
 
@@ -97,9 +98,16 @@ export default function AnalysisPage() {
       </div>
 
       <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
+        <p className="text-sm text-neutral-400">Sisa Uang (Pemasukan − Pengeluaran)</p>
+        <p className={`text-lg font-semibold ${sisaUang < 0 ? "text-red-400" : "text-green-400"}`}>
+          {formatRupiah(sisaUang)}
+        </p>
+      </div>
+
+      <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
         <p className="text-sm text-neutral-400">Sisa (Pemasukan − Total Budget)</p>
-        <p className={`text-lg font-semibold ${sisa < 0 ? "text-red-400" : "text-green-400"}`}>
-          {formatRupiah(sisa)}
+        <p className={`text-lg font-semibold ${sisaBudget < 0 ? "text-red-400" : "text-green-400"}`}>
+          {formatRupiah(sisaBudget)}
         </p>
       </div>
 
