@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useFinance } from "@/lib/hooks/useFinance";
 import { formatRupiah } from "@/lib/utils/currency";
 import { EXPENSE_CATEGORIES, Transaction } from "@/lib/types/finance";
@@ -20,10 +20,6 @@ export default function FinanceList({ isOwner, selectedDate, onEdit, editingId }
   const { transactions, loading, removeTransaction } = useFinance();
   const [page, setPage] = useState(0);
 
-  useEffect(() => {
-    setPage(0);
-  }, [selectedDate]);
-
   if (loading) return <p className="text-sm text-neutral-500">Memuat...</p>;
 
   const dayTransactions = transactions.filter((t) => t.date === selectedDate);
@@ -37,6 +33,19 @@ export default function FinanceList({ isOwner, selectedDate, onEdit, editingId }
     currentPage * PAGE_SIZE,
     currentPage * PAGE_SIZE + PAGE_SIZE
   );
+
+  function handleEdit(t: EditableTransaction) {
+    if (!onEdit) return;
+    if (window.confirm("Edit transaksi ini? Form akan terisi otomatis.")) {
+      onEdit(t);
+    }
+  }
+
+  function handleDelete(id: string) {
+    if (window.confirm("Yakin mau hapus transaksi ini? Data tidak bisa dikembalikan.")) {
+      removeTransaction(id);
+    }
+  }
 
   return (
     <div className="space-y-3">
@@ -70,7 +79,7 @@ export default function FinanceList({ isOwner, selectedDate, onEdit, editingId }
                 </span>
                 {isOwner && onEdit && (
                   <button
-                    onClick={() => onEdit(t)}
+                    onClick={() => handleEdit(t)}
                     className="text-xs text-neutral-500 hover:text-blue-400"
                   >
                     Edit
@@ -78,7 +87,7 @@ export default function FinanceList({ isOwner, selectedDate, onEdit, editingId }
                 )}
                 {isOwner && (
                   <button
-                    onClick={() => t.id && removeTransaction(t.id)}
+                    onClick={() => t.id && handleDelete(t.id)}
                     className="text-xs text-neutral-500 hover:text-red-500"
                   >
                     Hapus

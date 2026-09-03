@@ -48,7 +48,7 @@ export default function AnalysisPage() {
   const isCurrentMonth = monthId === getCurrentMonthId();
 
   return (
-    <div className="max-w-2xl mx-auto p-4 space-y-4">
+    <div className="max-w-2xl mx-auto p-4 space-y-4 overflow-x-hidden">
       <div className="flex items-center gap-3">
         <BackButton />
         <h1 className="text-xl font-semibold text-white">Analisis</h1>
@@ -87,26 +87,30 @@ export default function AnalysisPage() {
       )}
 
       <div className="grid grid-cols-2 gap-4">
-        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
+        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 min-w-0">
           <p className="text-sm text-neutral-400">Pemasukan Bulan Ini</p>
-          <p className="text-lg font-semibold text-green-400">{formatRupiah(totalIncome)}</p>
+          <p className="text-lg font-semibold text-green-400 break-words">
+            {formatRupiah(totalIncome)}
+          </p>
         </div>
-        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
+        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 min-w-0">
           <p className="text-sm text-neutral-400">Pengeluaran Bulan Ini</p>
-          <p className="text-lg font-semibold text-red-400">{formatRupiah(totalExpense)}</p>
+          <p className="text-lg font-semibold text-red-400 break-words">
+            {formatRupiah(totalExpense)}
+          </p>
         </div>
       </div>
 
-      <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
+      <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 min-w-0">
         <p className="text-sm text-neutral-400">Sisa Uang (Pemasukan − Pengeluaran)</p>
-        <p className={`text-lg font-semibold ${sisaUang < 0 ? "text-red-400" : "text-green-400"}`}>
+        <p className={`text-lg font-semibold break-words ${sisaUang < 0 ? "text-red-400" : "text-green-400"}`}>
           {formatRupiah(sisaUang)}
         </p>
       </div>
 
-      <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
+      <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 min-w-0">
         <p className="text-sm text-neutral-400">Sisa (Pemasukan − Total Budget)</p>
-        <p className={`text-lg font-semibold ${sisaBudget < 0 ? "text-red-400" : "text-green-400"}`}>
+        <p className={`text-lg font-semibold break-words ${sisaBudget < 0 ? "text-red-400" : "text-green-400"}`}>
           {formatRupiah(sisaBudget)}
         </p>
       </div>

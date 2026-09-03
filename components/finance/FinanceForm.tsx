@@ -24,7 +24,6 @@ export default function FinanceForm({ editingTransaction, onCancelEdit, onSavedE
 
   const isEditing = !!editingTransaction;
 
-  // Isi form otomatis saat item edit dipilih, dan reset saat dibatalkan/selesai
   useEffect(() => {
     if (editingTransaction) {
       setType(editingTransaction.type);
@@ -44,6 +43,12 @@ export default function FinanceForm({ editingTransaction, onCancelEdit, onSavedE
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!amount) return;
+
+    const confirmMessage = isEditing
+      ? "Simpan perubahan transaksi ini?"
+      : "Simpan transaksi baru ini?";
+    if (!window.confirm(confirmMessage)) return;
+
     setSubmitting(true);
 
     const payload = {

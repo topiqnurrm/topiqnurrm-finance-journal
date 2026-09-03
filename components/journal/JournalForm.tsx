@@ -24,7 +24,6 @@ export default function JournalForm({ editingEntry, onCancelEdit, onSavedEdit }:
 
   const isEditing = !!editingEntry;
 
-  // Isi form otomatis saat item edit dipilih, dan reset saat dibatalkan/selesai
   useEffect(() => {
     if (editingEntry) {
       setCategoryId(editingEntry.categoryId);
@@ -42,6 +41,10 @@ export default function JournalForm({ editingEntry, onCancelEdit, onSavedEdit }:
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!categoryId || !content.trim()) return;
+
+    const confirmMessage = isEditing ? "Simpan perubahan jurnal ini?" : "Simpan jurnal baru ini?";
+    if (!window.confirm(confirmMessage)) return;
+
     setSubmitting(true);
 
     if (isEditing && editingEntry) {

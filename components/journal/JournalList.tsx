@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useJournal } from "@/lib/hooks/useJournal";
 import { JournalEntry } from "@/lib/types/journal";
 
@@ -19,10 +19,6 @@ export default function JournalList({ isOwner, selectedDate, onEdit, editingId }
   const { entries, loading, removeEntry } = useJournal();
   const [page, setPage] = useState(0);
 
-  useEffect(() => {
-    setPage(0);
-  }, [selectedDate]);
-
   if (loading) return <p className="text-sm text-neutral-500">Memuat...</p>;
 
   const dayEntries = entries.filter((e) => e.date === selectedDate);
@@ -33,6 +29,19 @@ export default function JournalList({ isOwner, selectedDate, onEdit, editingId }
   const totalPages = Math.max(1, Math.ceil(dayEntries.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages - 1);
   const paginated = dayEntries.slice(currentPage * PAGE_SIZE, currentPage * PAGE_SIZE + PAGE_SIZE);
+
+  function handleEdit(entry: EditableEntry) {
+    if (!onEdit) return;
+    if (window.confirm("Edit jurnal ini? Form akan terisi otomatis.")) {
+      onEdit(entry);
+    }
+  }
+
+  function handleDelete(id: string) {
+    if (window.confirm("Yakin mau hapus jurnal ini? Data tidak bisa dikembalikan.")) {
+      removeEntry(id);
+    }
+  }
 
   return (
     <div className="space-y-3">
@@ -54,7 +63,7 @@ export default function JournalList({ isOwner, selectedDate, onEdit, editingId }
                   <span className="text-xs text-neutral-500">{entry.date}</span>
                   {isOwner && onEdit && (
                     <button
-                      onClick={() => onEdit(entry)}
+                      onClick={() => handleEdit(entry)}
                       className="text-xs text-neutral-500 hover:text-blue-400"
                     >
                       Edit
@@ -62,7 +71,7 @@ export default function JournalList({ isOwner, selectedDate, onEdit, editingId }
                   )}
                   {isOwner && (
                     <button
-                      onClick={() => entry.id && removeEntry(entry.id)}
+                      onClick={() => entry.id && handleDelete(entry.id)}
                       className="text-xs text-neutral-500 hover:text-red-500"
                     >
                       Hapus
