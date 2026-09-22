@@ -13,16 +13,33 @@ const CATEGORIES = [
   { key: "mendadak", label: "Mendadak" },
   { key: "tabungan", label: "Tabungan" },
   { key: "foya_foya", label: "Foya-foya" },
+  { key: "grooming", label: "Grooming" },
+  { key: "dana_darurat", label: "Dana Darurat" },
+  { key: "audit", label: "Audit" },
 ] as const;
 
+const EMPTY_VALUES = {
+  kehidupan: 0,
+  mendadak: 0,
+  tabungan: 0,
+  foya_foya: 0,
+  grooming: 0,
+  dana_darurat: 0,
+  audit: 0,
+};
+
 export default function BudgetForm({ monthId, initialBudget, onSave }: Props) {
-  const [values, setValues] = useState({ kehidupan: 0, mendadak: 0, tabungan: 0, foya_foya: 0 });
+  const [values, setValues] = useState(EMPTY_VALUES);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (initialBudget) {
       const { id, ...rest } = initialBudget;
-      setValues(rest);
+      // Merge dengan default 0 supaya budget bulan lama (sebelum kategori baru
+      // ditambahkan) tidak punya field undefined untuk grooming/dana_darurat/audit
+      setValues({ ...EMPTY_VALUES, ...rest });
+    } else {
+      setValues(EMPTY_VALUES);
     }
   }, [initialBudget]);
 

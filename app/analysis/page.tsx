@@ -39,8 +39,17 @@ export default function AnalysisPage() {
   const totalExpense = monthlyTransactions
     .filter((t) => t.type === "expense")
     .reduce((s, t) => s + t.amount, 0);
+
+  // Pakai (budget?.field ?? 0) per field supaya aman untuk budget bulan lama
+  // yang belum punya field grooming/dana_darurat/audit.
   const totalBudgetAllocated = budget
-    ? budget.kehidupan + budget.mendadak + budget.tabungan + budget.foya_foya
+    ? (budget.kehidupan ?? 0) +
+      (budget.mendadak ?? 0) +
+      (budget.tabungan ?? 0) +
+      (budget.foya_foya ?? 0) +
+      (budget.grooming ?? 0) +
+      (budget.dana_darurat ?? 0) +
+      (budget.audit ?? 0)
     : 0;
   const sisaBudget = totalIncome - totalBudgetAllocated;
   const sisaUang = totalIncome - totalExpense;

@@ -7,6 +7,9 @@ const CATEGORY_LABELS: Record<string, string> = {
   mendadak: "Mendadak",
   tabungan: "Tabungan",
   foya_foya: "Foya-foya",
+  grooming: "Grooming",
+  dana_darurat: "Dana Darurat",
+  audit: "Audit",
 };
 
 interface ExportOptions {

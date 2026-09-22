@@ -1,9 +1,26 @@
 import { formatRupiah } from "@/lib/utils/currency";
 import { Budget, Transaction } from "@/lib/types/finance";
- 
-const CATEGORIES = ["kehidupan", "mendadak", "tabungan", "foya_foya"] as const;
-const LABELS: Record<string, string> = { kehidupan: "Kehidupan", mendadak: "Mendadak", tabungan: "Tabungan", foya_foya: "Foya-foya" };
- 
+
+const CATEGORIES = [
+  "kehidupan",
+  "mendadak",
+  "tabungan",
+  "foya_foya",
+  "grooming",
+  "dana_darurat",
+  "audit",
+] as const;
+
+const LABELS: Record<string, string> = {
+  kehidupan: "Kehidupan",
+  mendadak: "Mendadak",
+  tabungan: "Tabungan",
+  foya_foya: "Foya-foya",
+  grooming: "Grooming",
+  dana_darurat: "Dana Darurat",
+  audit: "Audit",
+};
+
 export default function CategoryBreakdown({ budget, transactions }: { budget: Budget | null; transactions: Transaction[] }) {
   return (
     <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 space-y-4">
