@@ -1,38 +1,51 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useFinance } from "@/lib/hooks/useFinance";
 import { formatRupiah } from "@/lib/utils/currency";
 import { EXPENSE_CATEGORIES, Transaction } from "@/lib/types/finance";
+import { SortMode } from "@/components/ui/SortModeToggle";
 
 const PAGE_SIZE = 50;
+const CATEGORY_LIMIT = 6;
 
 type EditableTransaction = Transaction & { id: string };
 
 interface Props {
   isOwner: boolean;
   selectedDate: string;
+  sortMode: SortMode;
   onEdit?: (t: EditableTransaction) => void;
   editingId?: string | null;
 }
 
-export default function FinanceList({ isOwner, selectedDate, onEdit, editingId }: Props) {
+// Pilihan di dropdown: Pemasukan + semua kategori pengeluaran
+const CATEGORY_OPTIONS: { value: string; label: string }[] = [
+  ...EXPENSE_CATEGORIES.map((c) => ({ value: c.value as string, label: c.label })),
+  { value: "income", label: "Pemasukan" },
+];
+
+// Terbaru di atas: tanggal desc, lalu waktu input desc
+function sortNewest(a: Transaction, b: Transaction) {
+  if (a.date !== b.date) return b.date.localeCompare(a.date);
+  return (b.createdAt ?? 0) - (a.createdAt ?? 0);
+}
+
+function matchesCategory(t: Transaction, key: string) {
+  if (key === "income") return t.type === "income";
+  return t.type === "expense" && t.category === key;
+}
+
+export default function FinanceList({ isOwner, selectedDate, sortMode, onEdit, editingId }: Props) {
   const { transactions, loading, removeTransaction } = useFinance();
   const [page, setPage] = useState(0);
+  const [categoryKey, setCategoryKey] = useState<string>(CATEGORY_OPTIONS[0].value);
+
+  useEffect(() => {
+    setPage(0);
+  }, [selectedDate]);
 
   if (loading) return <p className="text-sm text-neutral-500">Memuat...</p>;
-
-  const dayTransactions = transactions.filter((t) => t.date === selectedDate);
-
-  if (dayTransactions.length === 0)
-    return <p className="text-sm text-neutral-500">Belum ada transaksi di tanggal ini.</p>;
-
-  const totalPages = Math.max(1, Math.ceil(dayTransactions.length / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages - 1);
-  const paginated = dayTransactions.slice(
-    currentPage * PAGE_SIZE,
-    currentPage * PAGE_SIZE + PAGE_SIZE
-  );
 
   function handleEdit(t: EditableTransaction) {
     if (!onEdit) return;
@@ -47,57 +60,104 @@ export default function FinanceList({ isOwner, selectedDate, onEdit, editingId }
     }
   }
 
+  function renderRow(t: EditableTransaction) {
+    const categoryLabel = EXPENSE_CATEGORIES.find((c) => c.value === t.category)?.label;
+    const isBeingEdited = editingId === t.id;
+    return (
+      <div
+        key={t.id}
+        className={`flex items-center justify-between rounded-md border p-3 ${
+          isBeingEdited ? "border-blue-500 bg-neutral-900" : "border-neutral-800"
+        }`}
+      >
+        <div className="min-w-0">
+          <p className="text-sm font-medium">{t.type === "income" ? "Pemasukan" : categoryLabel}</p>
+          <p className="text-xs text-neutral-500">
+            {t.date} {t.note && `· ${t.note}`}
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <span
+            className={`text-sm font-semibold ${
+              t.type === "income" ? "text-green-500" : "text-red-500"
+            }`}
+          >
+            {t.type === "income" ? "+" : "-"}
+            {formatRupiah(t.amount)}
+          </span>
+          {isOwner && onEdit && (
+            <button
+              onClick={() => handleEdit(t)}
+              className="text-xs text-neutral-500 hover:text-blue-400"
+            >
+              Edit
+            </button>
+          )}
+          {isOwner && (
+            <button
+              onClick={() => t.id && handleDelete(t.id)}
+              className="text-xs text-neutral-500 hover:text-red-500"
+            >
+              Hapus
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ===== MODE PER KATEGORI: pilih 1 kategori, tanpa pagination, maks 6 terbaru =====
+  if (sortMode === "category") {
+    const items = transactions
+      .filter((t) => matchesCategory(t, categoryKey))
+      .sort(sortNewest);
+
+    return (
+      <div className="space-y-3">
+        <select
+          value={categoryKey}
+          onChange={(e) => setCategoryKey(e.target.value)}
+          className="w-full rounded-md bg-neutral-800 p-2 text-sm"
+        >
+          {CATEGORY_OPTIONS.map((c) => (
+            <option key={c.value} value={c.value}>
+              {c.label}
+            </option>
+          ))}
+        </select>
+
+        {items.length === 0 ? (
+          <p className="text-sm text-neutral-500">Belum ada transaksi di kategori ini.</p>
+        ) : (
+          <>
+            <p className="text-xs text-neutral-500">
+              {items.length > CATEGORY_LIMIT
+                ? `${CATEGORY_LIMIT} terbaru dari ${items.length} transaksi`
+                : `${items.length} transaksi`}
+            </p>
+            <div className="space-y-2">{items.slice(0, CATEGORY_LIMIT).map(renderRow)}</div>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  // ===== MODE PER TANGGAL (seperti sebelumnya) =====
+  const dayTransactions = transactions.filter((t) => t.date === selectedDate);
+
+  if (dayTransactions.length === 0)
+    return <p className="text-sm text-neutral-500">Belum ada transaksi di tanggal ini.</p>;
+
+  const totalPages = Math.max(1, Math.ceil(dayTransactions.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages - 1);
+  const paginated = dayTransactions.slice(
+    currentPage * PAGE_SIZE,
+    currentPage * PAGE_SIZE + PAGE_SIZE
+  );
+
   return (
     <div className="space-y-3">
-      <div className="space-y-2">
-        {paginated.map((t) => {
-          const categoryLabel = EXPENSE_CATEGORIES.find((c) => c.value === t.category)?.label;
-          const isBeingEdited = editingId === t.id;
-          return (
-            <div
-              key={t.id}
-              className={`flex items-center justify-between rounded-md border p-3 ${
-                isBeingEdited ? "border-blue-500 bg-neutral-900" : "border-neutral-800"
-              }`}
-            >
-              <div>
-                <p className="text-sm font-medium">
-                  {t.type === "income" ? "Pemasukan" : categoryLabel}
-                </p>
-                <p className="text-xs text-neutral-500">
-                  {t.date} {t.note && `· ${t.note}`}
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <span
-                  className={`text-sm font-semibold ${
-                    t.type === "income" ? "text-green-500" : "text-red-500"
-                  }`}
-                >
-                  {t.type === "income" ? "+" : "-"}
-                  {formatRupiah(t.amount)}
-                </span>
-                {isOwner && onEdit && (
-                  <button
-                    onClick={() => handleEdit(t)}
-                    className="text-xs text-neutral-500 hover:text-blue-400"
-                  >
-                    Edit
-                  </button>
-                )}
-                {isOwner && (
-                  <button
-                    onClick={() => t.id && handleDelete(t.id)}
-                    className="text-xs text-neutral-500 hover:text-red-500"
-                  >
-                    Hapus
-                  </button>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      <div className="space-y-2">{paginated.map(renderRow)}</div>
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between pt-2">

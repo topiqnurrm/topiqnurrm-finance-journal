@@ -7,6 +7,7 @@ import FinanceList from "@/components/finance/FinanceList";
 import FinanceSummaryCard from "@/components/finance/FinanceSummaryCard";
 import BackButton from "@/components/ui/BackButton";
 import DayNav from "@/components/ui/DayNav";
+import SortModeToggle, { SortMode } from "@/components/ui/SortModeToggle";
 import { Transaction } from "@/lib/types/finance";
 import { getLocalDateStr } from "@/lib/utils/date";
 
@@ -16,6 +17,7 @@ export default function FinancePage() {
   const { isOwner } = useAuth();
   const [editingTransaction, setEditingTransaction] = useState<EditableTransaction | null>(null);
   const [selectedDate, setSelectedDate] = useState(getLocalDateStr());
+  const [sortMode, setSortMode] = useState<SortMode>("date");
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 p-4">
@@ -32,11 +34,20 @@ export default function FinancePage() {
         />
       )}
 
-      <DayNav selectedDate={selectedDate} onChange={setSelectedDate} />
+      {/* Navigasi tanggal diredupkan saat mode Per Kategori karena tidak dipakai */}
+      <div
+        className={sortMode === "category" ? "pointer-events-none opacity-40" : ""}
+        aria-disabled={sortMode === "category"}
+      >
+        <DayNav selectedDate={selectedDate} onChange={setSelectedDate} />
+      </div>
+
+      <SortModeToggle mode={sortMode} onChange={setSortMode} />
 
       <FinanceList
         isOwner={isOwner}
         selectedDate={selectedDate}
+        sortMode={sortMode}
         onEdit={isOwner ? setEditingTransaction : undefined}
         editingId={editingTransaction?.id ?? null}
       />
