@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
+import { useAuth } from "@/lib/hooks/useAuth";
 import { useFinance } from "@/lib/hooks/useFinance";
 import { useBudget } from "@/lib/hooks/useBudget";
 import BudgetForm from "@/components/analysis/BudgetForm";
@@ -25,6 +26,7 @@ function formatMonthLabel(monthId: string) {
 }
 
 export default function AnalysisPage() {
+  const { isOwner } = useAuth();
   const [monthId, setMonthId] = useState(getCurrentMonthId());
   const { transactions } = useFinance();
   const { budget, loading, saveBudget } = useBudget(monthId);
@@ -40,8 +42,6 @@ export default function AnalysisPage() {
     .filter((t) => t.type === "expense")
     .reduce((s, t) => s + t.amount, 0);
 
-  // Pakai (budget?.field ?? 0) per field supaya aman untuk budget bulan lama
-  // yang belum punya field grooming/dana_darurat/audit.
   const totalBudgetAllocated = budget
     ? (budget.kehidupan ?? 0) +
       (budget.mendadak ?? 0) +
@@ -124,7 +124,8 @@ export default function AnalysisPage() {
         </p>
       </div>
 
-      {!loading && (
+      {/* Form set budget hanya untuk owner; read-only tidak melihatnya sama sekali */}
+      {isOwner && !loading && (
         <BudgetForm key={monthId} monthId={monthId} initialBudget={budget} onSave={saveBudget} />
       )}
 
