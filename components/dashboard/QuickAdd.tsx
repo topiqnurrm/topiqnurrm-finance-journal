@@ -6,6 +6,12 @@ export default function QuickAdd() {
   return (
     <div className="grid grid-cols-2 gap-3">
       <Link
+        href="/review"
+        className="col-span-2 rounded-lg bg-teal-600 py-3 text-center text-sm font-medium text-white"
+      >
+        Review Detail
+      </Link>
+      <Link
         href="/finance"
         className="rounded-lg bg-blue-600 py-3 text-center text-sm font-medium text-white"
       >
