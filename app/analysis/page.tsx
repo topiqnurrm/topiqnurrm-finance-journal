@@ -54,6 +54,14 @@ export default function AnalysisPage() {
   const sisaBudget = totalIncome - totalBudgetAllocated;
   const sisaUang = totalIncome - totalExpense;
 
+  // Total terkumpul sepanjang waktu (bukan hanya bulan yang sedang dilihat)
+  const totalTabungan = transactions
+    .filter((t) => t.type === "expense" && t.category === "tabungan")
+    .reduce((s, t) => s + t.amount, 0);
+  const totalDanaDarurat = transactions
+    .filter((t) => t.type === "expense" && t.category === "dana_darurat")
+    .reduce((s, t) => s + t.amount, 0);
+
   const isCurrentMonth = monthId === getCurrentMonthId();
 
   return (
@@ -115,6 +123,23 @@ export default function AnalysisPage() {
         <p className={`text-lg font-semibold break-words ${sisaUang < 0 ? "text-red-400" : "text-green-400"}`}>
           {formatRupiah(sisaUang)}
         </p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 min-w-0">
+          <p className="text-sm text-neutral-400">Total Tabungan</p>
+          <p className="text-lg font-semibold text-blue-400 break-words">
+            {formatRupiah(totalTabungan)}
+          </p>
+          <p className="mt-1 text-xs text-neutral-600">Terkumpul sepanjang waktu</p>
+        </div>
+        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 min-w-0">
+          <p className="text-sm text-neutral-400">Total Dana Darurat</p>
+          <p className="text-lg font-semibold text-blue-400 break-words">
+            {formatRupiah(totalDanaDarurat)}
+          </p>
+          <p className="mt-1 text-xs text-neutral-600">Terkumpul sepanjang waktu</p>
+        </div>
       </div>
 
       <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 min-w-0">
