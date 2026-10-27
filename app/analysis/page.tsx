@@ -54,12 +54,13 @@ export default function AnalysisPage() {
   const sisaBudget = totalIncome - totalBudgetAllocated;
   const sisaUang = totalIncome - totalExpense;
 
-  // Total terkumpul sepanjang waktu (bukan hanya bulan yang sedang dilihat)
+  // Total terkumpul kumulatif sampai akhir bulan yang dipilih:
+  // semua transaksi dengan bulan <= monthId (format YYYY-MM bisa dibandingkan sebagai string)
   const totalTabungan = transactions
-    .filter((t) => t.type === "expense" && t.category === "tabungan")
+    .filter((t) => t.type === "expense" && t.category === "tabungan" && t.date.slice(0, 7) <= monthId)
     .reduce((s, t) => s + t.amount, 0);
   const totalDanaDarurat = transactions
-    .filter((t) => t.type === "expense" && t.category === "dana_darurat")
+    .filter((t) => t.type === "expense" && t.category === "dana_darurat" && t.date.slice(0, 7) <= monthId)
     .reduce((s, t) => s + t.amount, 0);
 
   const isCurrentMonth = monthId === getCurrentMonthId();
@@ -131,14 +132,14 @@ export default function AnalysisPage() {
           <p className="text-lg font-semibold text-blue-400 break-words">
             {formatRupiah(totalTabungan)}
           </p>
-          <p className="mt-1 text-xs text-neutral-600">Terkumpul sepanjang waktu</p>
+          <p className="mt-1 text-xs text-neutral-600">Terkumpul sampai akhir {formatMonthLabel(monthId)}</p>
         </div>
         <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 min-w-0">
           <p className="text-sm text-neutral-400">Total Dana Darurat</p>
           <p className="text-lg font-semibold text-blue-400 break-words">
             {formatRupiah(totalDanaDarurat)}
           </p>
-          <p className="mt-1 text-xs text-neutral-600">Terkumpul sepanjang waktu</p>
+          <p className="mt-1 text-xs text-neutral-600">Terkumpul sampai akhir {formatMonthLabel(monthId)}</p>
         </div>
       </div>
 
