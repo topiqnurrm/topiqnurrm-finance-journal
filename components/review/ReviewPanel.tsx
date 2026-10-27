@@ -1,38 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useFinance } from "@/lib/hooks/useFinance";
-import { useJournal } from "@/lib/hooks/useJournal";
+import { useReviewData } from "@/lib/hooks/useReviewData";
+import { deleteItem } from "@/lib/firebase/firestore";
 import { formatRupiah } from "@/lib/utils/currency";
 import { EXPENSE_CATEGORIES } from "@/lib/types/finance";
 import AuditLegend, { auditBorder } from "@/components/ui/AuditLegend";
-import { getLatestAuditDate } from "@/lib/utils/audit";
+import ReviewEditForm from "./ReviewEditForm";
+import { ReviewItem } from "./types";
 
 const PAGE_SIZE = 20;
 
 type KindFilter = "all" | "transaction" | "journal";
-
-type ReviewItem =
-  | {
-      kind: "transaction";
-      key: string;
-      date: string;
-      createdAt: number;
-      categoryValue: string; // "tx:income" | "tx:<kategori>"
-      categoryLabel: string;
-      txType: "income" | "expense";
-      amount: number;
-      note: string;
-    }
-  | {
-      kind: "journal";
-      key: string;
-      date: string;
-      createdAt: number;
-      categoryValue: string; // "jr:<categoryId>"
-      categoryLabel: string;
-      content: string;
-    };
 
 // Terbaru di atas: tanggal desc, lalu waktu input desc
 function sortNewest(a: ReviewItem, b: ReviewItem) {
@@ -41,17 +20,17 @@ function sortNewest(a: ReviewItem, b: ReviewItem) {
 }
 
 export default function ReviewPanel() {
-  const { transactions, loading: loadingFinance } = useFinance();
-  const { entries, categories, loading: loadingJournal } = useJournal();
-
-  const auditDate = getLatestAuditDate(transactions);
-
   const [search, setSearch] = useState("");
   const [kind, setKind] = useState<KindFilter>("all");
   const [category, setCategory] = useState("all");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [page, setPage] = useState(0);
+  const [showChecked, setShowChecked] = useState(false); // tampilkan juga yang hijau
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+
+  const { auditDate, transactions, journals, categories, loading, includeOld, rangeReachesBefore } =
+    useReviewData({ showChecked, from, to });
 
   const rangeActive = !!(from || to);
   const invalidRange = !!(from && to && from > to);
@@ -60,7 +39,7 @@ export default function ReviewPanel() {
   // Setiap filter berubah, kembali ke halaman pertama
   useEffect(() => {
     setPage(0);
-  }, [search, kind, category, from, to]);
+  }, [search, kind, category, from, to, showChecked]);
 
   // Gabungkan transaksi + jurnal jadi satu daftar
   const items = useMemo<ReviewItem[]>(() => {
@@ -68,6 +47,7 @@ export default function ReviewPanel() {
       const isIncome = t.type === "income";
       return {
         kind: "transaction",
+        id: t.id,
         key: `tx-${t.id}`,
         date: t.date,
         createdAt: t.createdAt ?? 0,
@@ -80,8 +60,9 @@ export default function ReviewPanel() {
         note: t.note ?? "",
       };
     });
-    const jr = entries.map((e): ReviewItem => ({
+    const jr = journals.map((e): ReviewItem => ({
       kind: "journal",
+      id: e.id,
       key: `jr-${e.id}`,
       date: e.date,
       createdAt: e.createdAt ?? 0,
@@ -90,7 +71,7 @@ export default function ReviewPanel() {
       content: e.content,
     }));
     return [...tx, ...jr];
-  }, [transactions, entries]);
+  }, [transactions, journals]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -142,6 +123,22 @@ export default function ReviewPanel() {
     setTo("");
   }
 
+  function handleEdit(it: ReviewItem) {
+    const label = it.kind === "transaction" ? "transaksi" : "jurnal";
+    if (window.confirm(`Edit ${label} ini? Form akan terisi otomatis.`)) {
+      setEditingKey(it.key);
+    }
+  }
+
+  function handleDelete(it: ReviewItem) {
+    const label = it.kind === "transaction" ? "transaksi" : "jurnal";
+    if (!window.confirm(`Yakin mau hapus ${label} ini? Data tidak bisa dikembalikan.`)) return;
+    deleteItem(it.kind === "transaction" ? "finances" : "journals", it.id).catch((err) => {
+      console.error(err);
+      window.alert("Gagal menghapus, coba lagi.");
+    });
+  }
+
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages - 1);
   // Kalau rentang tanggal aktif: tampil semua tanpa pagination
@@ -149,14 +146,23 @@ export default function ReviewPanel() {
     ? filtered
     : filtered.slice(currentPage * PAGE_SIZE, currentPage * PAGE_SIZE + PAGE_SIZE);
 
-  const loading = loadingFinance || loadingJournal;
-
   function renderRow(it: ReviewItem) {
+    if (editingKey === it.key) {
+      return (
+        <div key={it.key}>
+          <ReviewEditForm item={it} categories={categories} onDone={() => setEditingKey(null)} />
+        </div>
+      );
+    }
+
     if (it.kind === "transaction") {
       return (
         <div
           key={it.key}
-          className={`flex items-center justify-between gap-3 rounded-md border border-neutral-800 p-3 ${auditBorder(it.date, auditDate)}`}
+          className={`flex items-center justify-between gap-3 rounded-md border border-neutral-800 p-3 ${auditBorder(
+            it.date,
+            auditDate
+          )}`}
         >
           <div className="min-w-0">
             <div className="mb-1 flex items-center gap-2">
@@ -169,19 +175,37 @@ export default function ReviewPanel() {
               {it.date} {it.note && `· ${it.note}`}
             </p>
           </div>
-          <span
-            className={`shrink-0 text-sm font-semibold ${
-              it.txType === "income" ? "text-green-500" : "text-red-500"
-            }`}
-          >
-            {it.txType === "income" ? "+" : "-"}
-            {formatRupiah(it.amount)}
-          </span>
+          <div className="flex shrink-0 items-center gap-3">
+            <span
+              className={`text-sm font-semibold ${
+                it.txType === "income" ? "text-green-500" : "text-red-500"
+              }`}
+            >
+              {it.txType === "income" ? "+" : "-"}
+              {formatRupiah(it.amount)}
+            </span>
+            <button
+              onClick={() => handleEdit(it)}
+              className="text-xs text-neutral-500 hover:text-blue-400"
+            >
+              Edit
+            </button>
+            <button
+              onClick={() => handleDelete(it)}
+              className="text-xs text-neutral-500 hover:text-red-500"
+            >
+              Hapus
+            </button>
+          </div>
         </div>
       );
     }
+
     return (
-      <div key={it.key} className={`rounded-md border border-neutral-800 p-3 ${auditBorder(it.date, auditDate)}`}>
+      <div
+        key={it.key}
+        className={`rounded-md border border-neutral-800 p-3 ${auditBorder(it.date, auditDate)}`}
+      >
         <div className="mb-1 flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
             <span className="rounded bg-purple-950 px-1.5 py-0.5 text-[10px] text-purple-300">
@@ -191,7 +215,21 @@ export default function ReviewPanel() {
               {it.categoryLabel}
             </span>
           </div>
-          <span className="shrink-0 text-xs text-neutral-500">{it.date}</span>
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="text-xs text-neutral-500">{it.date}</span>
+            <button
+              onClick={() => handleEdit(it)}
+              className="text-xs text-neutral-500 hover:text-blue-400"
+            >
+              Edit
+            </button>
+            <button
+              onClick={() => handleDelete(it)}
+              className="text-xs text-neutral-500 hover:text-red-500"
+            >
+              Hapus
+            </button>
+          </div>
         </div>
         <p className="whitespace-pre-wrap break-words text-sm text-neutral-200">{it.content}</p>
       </div>
@@ -286,6 +324,28 @@ export default function ReviewPanel() {
       </div>
 
       <AuditLegend auditDate={auditDate} />
+
+      {/* Tampilkan juga yang hijau (sebelum audit) */}
+      {auditDate && (
+        <div className="space-y-1">
+          <label className="flex items-center gap-2 text-sm text-neutral-300">
+            <input
+              type="checkbox"
+              checked={showChecked}
+              onChange={(e) => setShowChecked(e.target.checked)}
+              className="h-4 w-4"
+            />
+            Tampilkan juga yang sudah dicek (hijau)
+          </label>
+          <p className="text-xs text-neutral-600">
+            {includeOld
+              ? rangeReachesBefore && !showChecked
+                ? "Rentang tanggal mencakup data sebelum audit, jadi data hijau ikut dimuat."
+                : "Memuat semua data, termasuk sebelum tanggal audit."
+              : "Hanya memuat data sejak tanggal audit (kuning & biru) untuk menghemat read."}
+          </p>
+        </div>
+      )}
 
       {/* Info hasil + reset */}
       <div className="flex items-center justify-between">
