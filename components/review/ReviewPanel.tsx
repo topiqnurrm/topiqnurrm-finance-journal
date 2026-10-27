@@ -5,6 +5,8 @@ import { useFinance } from "@/lib/hooks/useFinance";
 import { useJournal } from "@/lib/hooks/useJournal";
 import { formatRupiah } from "@/lib/utils/currency";
 import { EXPENSE_CATEGORIES } from "@/lib/types/finance";
+import AuditLegend, { auditBorder } from "@/components/ui/AuditLegend";
+import { getLatestAuditDate } from "@/lib/utils/audit";
 
 const PAGE_SIZE = 20;
 
@@ -41,6 +43,8 @@ function sortNewest(a: ReviewItem, b: ReviewItem) {
 export default function ReviewPanel() {
   const { transactions, loading: loadingFinance } = useFinance();
   const { entries, categories, loading: loadingJournal } = useJournal();
+
+  const auditDate = getLatestAuditDate(transactions);
 
   const [search, setSearch] = useState("");
   const [kind, setKind] = useState<KindFilter>("all");
@@ -152,7 +156,7 @@ export default function ReviewPanel() {
       return (
         <div
           key={it.key}
-          className="flex items-center justify-between gap-3 rounded-md border border-neutral-800 p-3"
+          className={`flex items-center justify-between gap-3 rounded-md border border-neutral-800 p-3 ${auditBorder(it.date, auditDate)}`}
         >
           <div className="min-w-0">
             <div className="mb-1 flex items-center gap-2">
@@ -177,7 +181,7 @@ export default function ReviewPanel() {
       );
     }
     return (
-      <div key={it.key} className="rounded-md border border-neutral-800 p-3">
+      <div key={it.key} className={`rounded-md border border-neutral-800 p-3 ${auditBorder(it.date, auditDate)}`}>
         <div className="mb-1 flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
             <span className="rounded bg-purple-950 px-1.5 py-0.5 text-[10px] text-purple-300">
@@ -280,6 +284,8 @@ export default function ReviewPanel() {
           <p className="text-xs text-red-400">Tanggal "Dari" lebih besar dari "Sampai".</p>
         )}
       </div>
+
+      <AuditLegend auditDate={auditDate} />
 
       {/* Info hasil + reset */}
       <div className="flex items-center justify-between">

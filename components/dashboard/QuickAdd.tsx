@@ -1,16 +1,22 @@
 "use client";
 
 import Link from "next/link";
+import { useAuth } from "@/lib/hooks/useAuth";
 
 export default function QuickAdd() {
+  const { isOwner } = useAuth();
+
   return (
     <div className="grid grid-cols-2 gap-3">
-      <Link
-        href="/review"
-        className="col-span-2 rounded-lg bg-teal-600 py-3 text-center text-sm font-medium text-white"
-      >
-        Review Detail
-      </Link>
+      {/* Review Detail: khusus admin, tombol disembunyikan untuk user lain */}
+      {isOwner && (
+        <Link
+          href="/review"
+          className="col-span-2 rounded-lg bg-teal-600 py-3 text-center text-sm font-medium text-white"
+        >
+          Review Detail <span className="text-xs font-normal text-teal-100">(admin only)</span>
+        </Link>
+      )}
       <Link
         href="/finance"
         className="rounded-lg bg-blue-600 py-3 text-center text-sm font-medium text-white"
