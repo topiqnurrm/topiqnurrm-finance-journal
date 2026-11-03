@@ -2,7 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useFinance } from "@/lib/hooks/useFinance";
-import { EXPENSE_CATEGORIES, ExpenseCategory, Transaction, TransactionType } from "@/lib/types/finance";
+import {
+  EXPENSE_CATEGORIES,
+  INCOME_CATEGORIES,
+  ExpenseCategory,
+  IncomeCategory,
+  Transaction,
+  TransactionType,
+} from "@/lib/types/finance";
 import { getLocalDateStr } from "@/lib/utils/date";
 
 type EditableTransaction = Transaction & { id: string };
@@ -17,6 +24,7 @@ export default function FinanceForm({ editingTransaction, onCancelEdit, onSavedE
   const { addTransaction, editTransaction } = useFinance();
   const [type, setType] = useState<TransactionType>("expense");
   const [category, setCategory] = useState<ExpenseCategory>("kehidupan");
+  const [incomeCategory, setIncomeCategory] = useState<IncomeCategory | "">("");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [date, setDate] = useState(getLocalDateStr());
@@ -26,19 +34,30 @@ export default function FinanceForm({ editingTransaction, onCancelEdit, onSavedE
 
   useEffect(() => {
     if (editingTransaction) {
+      const cat = editingTransaction.category;
       setType(editingTransaction.type);
-      setCategory((editingTransaction.category as ExpenseCategory) || "kehidupan");
+      setCategory(editingTransaction.type === "expense" && cat ? (cat as ExpenseCategory) : "kehidupan");
+      setIncomeCategory(editingTransaction.type === "income" && cat ? (cat as IncomeCategory) : "");
       setAmount(String(editingTransaction.amount));
       setNote(editingTransaction.note || "");
       setDate(editingTransaction.date);
     } else {
       setType("expense");
       setCategory("kehidupan");
+      setIncomeCategory("");
       setAmount("");
       setNote("");
       setDate(getLocalDateStr());
     }
   }, [editingTransaction]);
+
+  // Keterangan singkat untuk jenis khusus
+  const hint =
+    type === "expense" && category === "sisa_dibawa"
+      ? "Sisa uang akhir bulan. Otomatis dihitung sebagai pemasukan bulan berikutnya."
+      : (type === "expense" && category === "hutang") || (type === "income" && incomeCategory === "hutang")
+      ? "Hutang/piutang tidak dihitung sebagai pemasukan maupun pengeluaran."
+      : "";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -53,7 +72,7 @@ export default function FinanceForm({ editingTransaction, onCancelEdit, onSavedE
 
     const payload = {
       type,
-      category: type === "expense" ? category : null,
+      category: type === "expense" ? category : incomeCategory || null,
       amount: parseInt(amount, 10),
       note,
       date,
@@ -100,7 +119,7 @@ export default function FinanceForm({ editingTransaction, onCancelEdit, onSavedE
         </button>
       </div>
 
-      {type === "expense" && (
+      {type === "expense" ? (
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value as ExpenseCategory)}
@@ -112,7 +131,21 @@ export default function FinanceForm({ editingTransaction, onCancelEdit, onSavedE
             </option>
           ))}
         </select>
+      ) : (
+        <select
+          value={incomeCategory}
+          onChange={(e) => setIncomeCategory(e.target.value as IncomeCategory | "")}
+          className="w-full rounded-md bg-neutral-800 p-2 text-sm"
+        >
+          {INCOME_CATEGORIES.map((c) => (
+            <option key={c.value || "general"} value={c.value}>
+              {c.label}
+            </option>
+          ))}
+        </select>
       )}
+
+      {hint && <p className="text-xs text-neutral-500">{hint}</p>}
 
       <input
         type="number"

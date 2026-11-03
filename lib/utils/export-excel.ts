@@ -10,6 +10,8 @@ const CATEGORY_LABELS: Record<string, string> = {
   grooming: "Grooming",
   dana_darurat: "Dana Darurat",
   audit: "Audit",
+  sisa_dibawa: "Sisa Dibawa ke Bulan Depan",
+  hutang: "Hutang / Piutang",
 };
 
 interface ExportOptions {
@@ -48,17 +50,28 @@ export function exportToExcel({ transactions, journals, from, to }: ExportOption
     Isi: j.content,
   }));
 
-  const totalIncome = filteredTransactions
-    .filter((t) => t.type === "income")
+  // Hutang/piutang tidak dihitung sebagai pemasukan maupun pengeluaran
+  const counted = filteredTransactions.filter((t) => t.category !== "hutang");
+  const totalIncome = counted.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
+  const totalExpense = counted.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+  const debtOut = filteredTransactions
+    .filter((t) => t.category === "hutang" && t.type === "expense")
     .reduce((s, t) => s + t.amount, 0);
-  const totalExpense = filteredTransactions
-    .filter((t) => t.type === "expense")
+  const debtIn = filteredTransactions
+    .filter((t) => t.category === "hutang" && t.type === "income")
+    .reduce((s, t) => s + t.amount, 0);
+  const carryOut = filteredTransactions
+    .filter((t) => t.category === "sisa_dibawa")
     .reduce((s, t) => s + t.amount, 0);
 
+  // Dihitung dari baris yang ada di sheet Transaksi pada rentang ini
   const summaryRows = [
-    { Ringkasan: "Total Pemasukan", Nilai: totalIncome },
-    { Ringkasan: "Total Pengeluaran", Nilai: totalExpense },
+    { Ringkasan: "Total Pemasukan (tanpa hutang/piutang)", Nilai: totalIncome },
+    { Ringkasan: "Total Pengeluaran (tanpa hutang/piutang)", Nilai: totalExpense },
     { Ringkasan: "Selisih", Nilai: totalIncome - totalExpense },
+    { Ringkasan: "Sisa Dibawa ke Bulan Depan (sudah termasuk di pengeluaran)", Nilai: carryOut },
+    { Ringkasan: "Hutang/Piutang Uang Keluar (tidak dihitung)", Nilai: debtOut },
+    { Ringkasan: "Hutang/Piutang Uang Masuk (tidak dihitung)", Nilai: debtIn },
     { Ringkasan: "Jumlah Transaksi", Nilai: filteredTransactions.length },
     { Ringkasan: "Jumlah Jurnal", Nilai: filteredJournals.length },
   ];

@@ -6,6 +6,7 @@ import { useBudget } from "@/lib/hooks/useBudget";
 import CategoryBreakdown from "@/components/analysis/CategoryBreakdown";
 import { formatRupiah } from "@/lib/utils/currency";
 import { getLocalDateStr } from "@/lib/utils/date";
+import { calcMonthTotals } from "@/lib/utils/finance";
 
 export default function MonthOverview() {
   // Pakai tanggal lokal (bukan toISOString) supaya bulan tidak meleset karena UTC
@@ -18,13 +19,9 @@ export default function MonthOverview() {
     [transactions, monthId]
   );
 
-  const totalIncome = monthlyTransactions
-    .filter((t) => t.type === "income")
-    .reduce((s, t) => s + t.amount, 0);
-  const totalExpense = monthlyTransactions
-    .filter((t) => t.type === "expense")
-    .reduce((s, t) => s + t.amount, 0);
-  const sisaUang = totalIncome - totalExpense;
+  // Hutang/piutang tidak dihitung; sisa bulan lalu ikut jadi pemasukan bulan ini
+  const { income, expense } = calcMonthTotals(transactions, monthId);
+  const sisaUang = income - expense;
 
   const monthLabel = new Date().toLocaleDateString("id-ID", { month: "long", year: "numeric" });
 

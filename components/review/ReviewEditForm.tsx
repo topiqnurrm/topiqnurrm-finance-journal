@@ -3,7 +3,9 @@
 import { useState } from "react";
 import {
   EXPENSE_CATEGORIES,
+  INCOME_CATEGORIES,
   ExpenseCategory,
+  IncomeCategory,
   Transaction,
   TransactionType,
 } from "@/lib/types/finance";
@@ -28,7 +30,10 @@ export default function ReviewEditForm({ item, categories, onDone }: Props) {
 function TransactionEdit({ item, onDone }: { item: TransactionReviewItem; onDone: () => void }) {
   const [type, setType] = useState<TransactionType>(item.txType);
   const [category, setCategory] = useState<ExpenseCategory>(
-    item.txType === "expense" ? (item.categoryValue.slice(3) as ExpenseCategory) : "kehidupan"
+    item.txType === "expense" && item.category ? (item.category as ExpenseCategory) : "kehidupan"
+  );
+  const [incomeCategory, setIncomeCategory] = useState<IncomeCategory | "">(
+    item.txType === "income" && item.category ? (item.category as IncomeCategory) : ""
   );
   const [amount, setAmount] = useState(String(item.amount));
   const [note, setNote] = useState(item.note);
@@ -44,7 +49,7 @@ function TransactionEdit({ item, onDone }: { item: TransactionReviewItem; onDone
     try {
       await updateItem<Transaction>("finances", item.id, {
         type,
-        category: type === "expense" ? category : null,
+        category: type === "expense" ? category : incomeCategory || null,
         amount: parseInt(amount, 10),
         note,
         date,
@@ -85,7 +90,7 @@ function TransactionEdit({ item, onDone }: { item: TransactionReviewItem; onDone
         </button>
       </div>
 
-      {type === "expense" && (
+      {type === "expense" ? (
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value as ExpenseCategory)}
@@ -93,6 +98,18 @@ function TransactionEdit({ item, onDone }: { item: TransactionReviewItem; onDone
         >
           {EXPENSE_CATEGORIES.map((c) => (
             <option key={c.value} value={c.value}>
+              {c.label}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <select
+          value={incomeCategory}
+          onChange={(e) => setIncomeCategory(e.target.value as IncomeCategory | "")}
+          className="w-full min-w-0 rounded-md bg-neutral-800 p-2 text-sm"
+        >
+          {INCOME_CATEGORIES.map((c) => (
+            <option key={c.value || "general"} value={c.value}>
               {c.label}
             </option>
           ))}

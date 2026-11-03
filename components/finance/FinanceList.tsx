@@ -2,8 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useFinance } from "@/lib/hooks/useFinance";
-import { formatRupiah } from "@/lib/utils/currency";
-import { EXPENSE_CATEGORIES, Transaction } from "@/lib/types/finance";
+import {
+  EXPENSE_CATEGORIES,
+  INCOME_CATEGORIES,
+  Transaction,
+  getCategoryLabel,
+} from "@/lib/types/finance";
+import { getAmountDisplay } from "@/lib/utils/finance";
 import { SortMode } from "@/components/ui/SortModeToggle";
 
 const PAGE_SIZE = 50;
@@ -19,11 +24,15 @@ interface Props {
   editingId?: string | null;
 }
 
-// Pilihan di dropdown: Pemasukan + semua kategori pengeluaran
-const CATEGORY_OPTIONS: { value: string; label: string }[] = [
-  ...EXPENSE_CATEGORIES.map((c) => ({ value: c.value as string, label: c.label })),
-  { value: "income", label: "Pemasukan" },
-];
+// Pilihan dropdown: "expense:<kategori>" dan "income:<kategori|general>"
+const EXPENSE_OPTIONS = EXPENSE_CATEGORIES.map((c) => ({
+  value: `expense:${c.value}`,
+  label: c.label,
+}));
+const INCOME_OPTIONS = INCOME_CATEGORIES.map((c) => ({
+  value: `income:${c.value || "general"}`,
+  label: c.value ? c.label : "Pemasukan (biasa)",
+}));
 
 // Terbaru di atas: tanggal desc, lalu waktu input desc
 function sortNewest(a: Transaction, b: Transaction) {
@@ -32,14 +41,16 @@ function sortNewest(a: Transaction, b: Transaction) {
 }
 
 function matchesCategory(t: Transaction, key: string) {
-  if (key === "income") return t.type === "income";
-  return t.type === "expense" && t.category === key;
+  const [type, cat] = key.split(":");
+  if (t.type !== type) return false;
+  if (type === "income" && cat === "general") return !t.category;
+  return t.category === cat;
 }
 
 export default function FinanceList({ isOwner, selectedDate, sortMode, onEdit, editingId }: Props) {
   const { transactions, loading, removeTransaction } = useFinance();
   const [page, setPage] = useState(0);
-  const [categoryKey, setCategoryKey] = useState<string>(CATEGORY_OPTIONS[0].value);
+  const [categoryKey, setCategoryKey] = useState<string>(EXPENSE_OPTIONS[0].value);
 
   useEffect(() => {
     setPage(0);
@@ -61,7 +72,7 @@ export default function FinanceList({ isOwner, selectedDate, sortMode, onEdit, e
   }
 
   function renderRow(t: EditableTransaction) {
-    const categoryLabel = EXPENSE_CATEGORIES.find((c) => c.value === t.category)?.label;
+    const amount = getAmountDisplay(t);
     const isBeingEdited = editingId === t.id;
     return (
       <div
@@ -71,7 +82,7 @@ export default function FinanceList({ isOwner, selectedDate, sortMode, onEdit, e
         }`}
       >
         <div className="min-w-0">
-          <p className="text-sm font-medium">{t.type === "income" ? "Pemasukan" : categoryLabel}</p>
+          <p className="text-sm font-medium">{getCategoryLabel(t.type, t.category)}</p>
           <p className="text-xs text-neutral-500">
             {t.date} {t.note && `· ${t.note}`}
           </p>
@@ -79,11 +90,10 @@ export default function FinanceList({ isOwner, selectedDate, sortMode, onEdit, e
         <div className="flex items-center gap-3">
           <span
             className={`text-sm font-semibold ${
-              t.type === "income" ? "text-green-500" : "text-red-500"
+              amount.positive ? "text-green-500" : "text-red-500"
             }`}
           >
-            {t.type === "income" ? "+" : "-"}
-            {formatRupiah(t.amount)}
+            {amount.text}
           </span>
           {isOwner && onEdit && (
             <button
@@ -119,11 +129,20 @@ export default function FinanceList({ isOwner, selectedDate, sortMode, onEdit, e
           onChange={(e) => setCategoryKey(e.target.value)}
           className="w-full rounded-md bg-neutral-800 p-2 text-sm"
         >
-          {CATEGORY_OPTIONS.map((c) => (
-            <option key={c.value} value={c.value}>
-              {c.label}
-            </option>
-          ))}
+          <optgroup label="Pengeluaran">
+            {EXPENSE_OPTIONS.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="Pemasukan">
+            {INCOME_OPTIONS.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
+            ))}
+          </optgroup>
         </select>
 
         {items.length === 0 ? (

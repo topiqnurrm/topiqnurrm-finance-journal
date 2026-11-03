@@ -8,6 +8,7 @@ import MonthlyChart from "@/components/analysis/MonthlyChart";
 import CategoryBreakdown from "@/components/analysis/CategoryBreakdown";
 import { formatRupiah } from "@/lib/utils/currency";
 import BackButton from "@/components/ui/BackButton";
+import { calcDebtBalance, calcMonthTotals } from "@/lib/utils/finance";
 
 function getCurrentMonthId() {
   const now = new Date();
@@ -35,12 +36,13 @@ export default function AnalysisPage() {
     () => transactions.filter((f) => f.date.startsWith(monthId)),
     [transactions, monthId]
   );
-  const totalIncome = monthlyTransactions
-    .filter((t) => t.type === "income")
-    .reduce((s, t) => s + t.amount, 0);
-  const totalExpense = monthlyTransactions
-    .filter((t) => t.type === "expense")
-    .reduce((s, t) => s + t.amount, 0);
+  // Hutang/piutang tidak dihitung; sisa bulan lalu otomatis jadi pemasukan bulan ini
+  const {
+    income: totalIncome,
+    expense: totalExpense,
+    carryIn,
+    carryOut,
+  } = calcMonthTotals(transactions, monthId);
 
   const totalBudgetAllocated = budget
     ? (budget.kehidupan ?? 0) +
@@ -53,6 +55,9 @@ export default function AnalysisPage() {
     : 0;
   const sisaBudget = totalIncome - totalBudgetAllocated;
   const sisaUang = totalIncome - totalExpense;
+
+  // Piutang belum lunas, kumulatif sampai akhir bulan yang dipilih
+  const piutang = calcDebtBalance(transactions, monthId);
 
   // Total terkumpul kumulatif sampai akhir bulan yang dipilih:
   // semua transaksi dengan bulan <= monthId (format YYYY-MM bisa dibandingkan sebagai string)
@@ -110,20 +115,47 @@ export default function AnalysisPage() {
           <p className="text-lg font-semibold text-green-400 break-words">
             {formatRupiah(totalIncome)}
           </p>
+          {carryIn !== 0 && (
+            <p className="mt-1 text-xs text-neutral-600">
+              termasuk sisa bulan lalu {formatRupiah(carryIn)}
+            </p>
+          )}
         </div>
         <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 min-w-0">
           <p className="text-sm text-neutral-400">Pengeluaran Bulan Ini</p>
           <p className="text-lg font-semibold text-red-400 break-words">
             {formatRupiah(totalExpense)}
           </p>
+          {carryOut !== 0 && (
+            <p className="mt-1 text-xs text-neutral-600">
+              termasuk sisa dibawa ke bulan depan {formatRupiah(carryOut)}
+            </p>
+          )}
         </div>
       </div>
 
-      <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 min-w-0">
-        <p className="text-sm text-neutral-400">Sisa Uang (Pemasukan − Pengeluaran)</p>
-        <p className={`text-lg font-semibold break-words ${sisaUang < 0 ? "text-red-400" : "text-green-400"}`}>
-          {formatRupiah(sisaUang)}
-        </p>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 min-w-0">
+          <p className="text-sm text-neutral-400">Sisa Uang</p>
+          <p className={`text-lg font-semibold break-words ${sisaUang < 0 ? "text-red-400" : "text-green-400"}`}>
+            {formatRupiah(sisaUang)}
+          </p>
+          <p className="mt-1 text-xs text-neutral-600">Pemasukan − Pengeluaran</p>
+        </div>
+        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 min-w-0">
+          <p className="text-sm text-neutral-400">Piutang</p>
+          <p
+            className={`text-lg font-semibold break-words ${
+              piutang > 0 ? "text-green-400" : piutang < 0 ? "text-red-400" : "text-neutral-300"
+            }`}
+          >
+            {piutang > 0 ? "+" : ""}
+            {formatRupiah(piutang)}
+          </p>
+          <p className="mt-1 text-xs text-neutral-600">
+            + orang lain berhutang ke kamu, − kamu berhutang
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -155,7 +187,7 @@ export default function AnalysisPage() {
         <BudgetForm key={monthId} monthId={monthId} initialBudget={budget} onSave={saveBudget} />
       )}
 
-      <MonthlyChart transactions={monthlyTransactions} />
+      <MonthlyChart income={totalIncome} expense={totalExpense} />
       <CategoryBreakdown budget={budget} transactions={monthlyTransactions} />
     </div>
   );

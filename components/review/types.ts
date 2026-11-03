@@ -1,3 +1,5 @@
+import { TransactionCategory } from "@/lib/types/finance";
+
 export type ReviewItem =
   | {
       kind: "transaction";
@@ -5,9 +7,10 @@ export type ReviewItem =
       key: string;
       date: string;
       createdAt: number;
-      categoryValue: string; // "tx:income" | "tx:<kategori>"
+      categoryValue: string; // "tx:expense:<kategori>" | "tx:income:<kategori|general>"
       categoryLabel: string;
       txType: "income" | "expense";
+      category: TransactionCategory | null;
       amount: number;
       note: string;
     }

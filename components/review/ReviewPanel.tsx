@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useReviewData } from "@/lib/hooks/useReviewData";
 import { deleteItem } from "@/lib/firebase/firestore";
 import { formatRupiah } from "@/lib/utils/currency";
-import { EXPENSE_CATEGORIES } from "@/lib/types/finance";
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, getCategoryLabel } from "@/lib/types/finance";
+import { getAmountDisplay } from "@/lib/utils/finance";
 import AuditLegend, { auditBorder } from "@/components/ui/AuditLegend";
 import ReviewEditForm from "./ReviewEditForm";
 import { ReviewItem } from "./types";
@@ -44,18 +45,16 @@ export default function ReviewPanel() {
   // Gabungkan transaksi + jurnal jadi satu daftar
   const items = useMemo<ReviewItem[]>(() => {
     const tx = transactions.map((t): ReviewItem => {
-      const isIncome = t.type === "income";
       return {
         kind: "transaction",
         id: t.id,
         key: `tx-${t.id}`,
         date: t.date,
         createdAt: t.createdAt ?? 0,
-        categoryValue: isIncome ? "tx:income" : `tx:${t.category ?? "lainnya"}`,
-        categoryLabel: isIncome
-          ? "Pemasukan"
-          : EXPENSE_CATEGORIES.find((c) => c.value === t.category)?.label ?? "Lainnya",
+        categoryValue: `tx:${t.type}:${t.category ?? "general"}`,
+        categoryLabel: getCategoryLabel(t.type, t.category),
         txType: t.type,
+        category: t.category,
         amount: t.amount,
         note: t.note ?? "",
       };
@@ -100,10 +99,14 @@ export default function ReviewPanel() {
       .sort(sortNewest);
   }, [items, search, kind, category, from, to]);
 
-  const txOptions = [
-    { value: "tx:income", label: "Pemasukan" },
-    ...EXPENSE_CATEGORIES.map((c) => ({ value: `tx:${c.value}`, label: c.label })),
-  ];
+  const expenseOptions = EXPENSE_CATEGORIES.map((c) => ({
+    value: `tx:expense:${c.value}`,
+    label: c.label,
+  }));
+  const incomeOptions = INCOME_CATEGORIES.map((c) => ({
+    value: `tx:income:${c.value || "general"}`,
+    label: c.value ? c.label : "Pemasukan (biasa)",
+  }));
   const journalOptions = categories.map((c) => ({ value: `jr:${c.id}`, label: c.name }));
 
   function changeKind(next: KindFilter) {
@@ -156,6 +159,7 @@ export default function ReviewPanel() {
     }
 
     if (it.kind === "transaction") {
+      const amount = getAmountDisplay({ type: it.txType, amount: it.amount });
       return (
         <div
           key={it.key}
@@ -178,11 +182,10 @@ export default function ReviewPanel() {
           <div className="flex shrink-0 items-center gap-3">
             <span
               className={`text-sm font-semibold ${
-                it.txType === "income" ? "text-green-500" : "text-red-500"
+                amount.positive ? "text-green-500" : "text-red-500"
               }`}
             >
-              {it.txType === "income" ? "+" : "-"}
-              {formatRupiah(it.amount)}
+              {amount.text}
             </span>
             <button
               onClick={() => handleEdit(it)}
@@ -277,13 +280,22 @@ export default function ReviewPanel() {
       >
         <option value="all">Semua kategori</option>
         {kind !== "journal" && (
-          <optgroup label="Transaksi">
-            {txOptions.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </optgroup>
+          <>
+            <optgroup label="Transaksi · Pengeluaran">
+              {expenseOptions.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="Transaksi · Pemasukan">
+              {incomeOptions.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </optgroup>
+          </>
         )}
         {kind !== "transaction" && journalOptions.length > 0 && (
           <optgroup label="Jurnal">

@@ -5,6 +5,8 @@ import { useFinance } from "@/lib/hooks/useFinance";
 import { useJournal } from "@/lib/hooks/useJournal";
 import { formatRupiah } from "@/lib/utils/currency";
 import { getLocalDateStr, shiftDate } from "@/lib/utils/date";
+import { getAmountDisplay, sumIncomeExpense } from "@/lib/utils/finance";
+import { getCategoryLabel } from "@/lib/types/finance";
 
 function formatDateLabel(dateStr: string) {
   const d = new Date(dateStr + "T00:00:00");
@@ -22,8 +24,8 @@ export default function TodayOverview() {
   const dayTx = transactions.filter((t) => t.date === selectedDate);
   const dayEntries = entries.filter((e) => e.date === selectedDate);
 
-  const income = dayTx.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
-  const expense = dayTx.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+  // Hutang/piutang tidak dihitung sebagai pemasukan maupun pengeluaran
+  const { income, expense } = sumIncomeExpense(dayTx);
 
   return (
     <div className="space-y-4">
@@ -108,15 +110,17 @@ export default function TodayOverview() {
           <p className="text-sm text-neutral-600">Belum ada transaksi di tanggal ini.</p>
         ) : (
           <div className="space-y-2">
-            {dayTx.slice(0, 5).map((t) => (
-              <div key={t.id} className="border-l-2 border-neutral-700 pl-3 flex justify-between text-sm">
-                <span className="text-neutral-400">{t.note || t.category || "Pemasukan"}</span>
-                <span className={t.type === "income" ? "text-green-500" : "text-red-500"}>
-                  {t.type === "income" ? "+" : "-"}
-                  {formatRupiah(t.amount)}
-                </span>
-              </div>
-            ))}
+            {dayTx.slice(0, 5).map((t) => {
+              const amount = getAmountDisplay(t);
+              return (
+                <div key={t.id} className="border-l-2 border-neutral-700 pl-3 flex justify-between text-sm">
+                  <span className="text-neutral-400">{t.note || getCategoryLabel(t.type, t.category)}</span>
+                  <span className={amount.positive ? "text-green-500" : "text-red-500"}>
+                    {amount.text}
+                  </span>
+                </div>
+              );
+            })}
             {dayTx.length > 5 && (
               <p className="text-xs text-neutral-600 pt-1">
                 +{dayTx.length - 5} transaksi lainnya, lihat di halaman Transaksi.
