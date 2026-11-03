@@ -9,6 +9,7 @@ import {
   IncomeCategory,
   Transaction,
   TransactionType,
+  getEffectiveType,
 } from "@/lib/types/finance";
 import { getLocalDateStr } from "@/lib/utils/date";
 
@@ -35,9 +36,11 @@ export default function FinanceForm({ editingTransaction, onCancelEdit, onSavedE
   useEffect(() => {
     if (editingTransaction) {
       const cat = editingTransaction.category;
-      setType(editingTransaction.type);
-      setCategory(editingTransaction.type === "expense" && cat ? (cat as ExpenseCategory) : "kehidupan");
-      setIncomeCategory(editingTransaction.type === "income" && cat ? (cat as IncomeCategory) : "");
+      // Data lama (pengeluaran "sisa_dibawa") otomatis dibuka sebagai jenis Sisa Bulan
+      const effType = getEffectiveType(editingTransaction);
+      setType(effType);
+      setCategory(effType === "expense" && cat ? (cat as ExpenseCategory) : "kehidupan");
+      setIncomeCategory(effType === "income" && cat ? (cat as IncomeCategory) : "");
       setAmount(String(editingTransaction.amount));
       setNote(editingTransaction.note || "");
       setDate(editingTransaction.date);
@@ -53,8 +56,8 @@ export default function FinanceForm({ editingTransaction, onCancelEdit, onSavedE
 
   // Keterangan singkat untuk jenis khusus
   const hint =
-    type === "expense" && category === "sisa_dibawa"
-      ? "Sisa uang akhir bulan. Otomatis dihitung sebagai pemasukan bulan berikutnya."
+    type === "carryover"
+      ? "Sisa uang akhir bulan. Bukan pemasukan dan bukan pengeluaran; otomatis tampil sebagai sisa bulan lalu di bulan berikutnya."
       : (type === "expense" && category === "hutang") || (type === "income" && incomeCategory === "hutang")
       ? "Hutang/piutang tidak dihitung sebagai pemasukan maupun pengeluaran."
       : "";
@@ -72,7 +75,8 @@ export default function FinanceForm({ editingTransaction, onCancelEdit, onSavedE
 
     const payload = {
       type,
-      category: type === "expense" ? category : incomeCategory || null,
+      category:
+        type === "expense" ? category : type === "income" ? incomeCategory || null : null,
       amount: parseInt(amount, 10),
       note,
       date,
@@ -117,6 +121,15 @@ export default function FinanceForm({ editingTransaction, onCancelEdit, onSavedE
         >
           Pemasukan
         </button>
+        <button
+          type="button"
+          onClick={() => setType("carryover")}
+          className={`flex-1 rounded-md py-2 text-sm ${
+            type === "carryover" ? "bg-sky-700 text-white" : "bg-neutral-800 text-neutral-400"
+          }`}
+        >
+          Sisa Bulan
+        </button>
       </div>
 
       {type === "expense" ? (
@@ -131,7 +144,7 @@ export default function FinanceForm({ editingTransaction, onCancelEdit, onSavedE
             </option>
           ))}
         </select>
-      ) : (
+      ) : type === "income" ? (
         <select
           value={incomeCategory}
           onChange={(e) => setIncomeCategory(e.target.value as IncomeCategory | "")}
@@ -143,7 +156,7 @@ export default function FinanceForm({ editingTransaction, onCancelEdit, onSavedE
             </option>
           ))}
         </select>
-      )}
+      ) : null}
 
       {hint && <p className="text-xs text-neutral-500">{hint}</p>}
 

@@ -4,8 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useReviewData } from "@/lib/hooks/useReviewData";
 import { deleteItem } from "@/lib/firebase/firestore";
 import { formatRupiah } from "@/lib/utils/currency";
-import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, getCategoryLabel } from "@/lib/types/finance";
+import {
+  EXPENSE_CATEGORIES,
+  INCOME_CATEGORIES,
+  getCategoryLabel,
+  getEffectiveType,
+} from "@/lib/types/finance";
 import { getAmountDisplay } from "@/lib/utils/finance";
+import { AMOUNT_TONE_CLASS } from "@/components/ui/amountTone";
 import AuditLegend, { auditBorder } from "@/components/ui/AuditLegend";
 import ReviewEditForm from "./ReviewEditForm";
 import { ReviewItem } from "./types";
@@ -45,15 +51,17 @@ export default function ReviewPanel() {
   // Gabungkan transaksi + jurnal jadi satu daftar
   const items = useMemo<ReviewItem[]>(() => {
     const tx = transactions.map((t): ReviewItem => {
+      // Data lama (pengeluaran "sisa_dibawa") dianggap jenis Sisa Bulan
+      const effType = getEffectiveType(t);
       return {
         kind: "transaction",
         id: t.id,
         key: `tx-${t.id}`,
         date: t.date,
         createdAt: t.createdAt ?? 0,
-        categoryValue: `tx:${t.type}:${t.category ?? "general"}`,
-        categoryLabel: getCategoryLabel(t.type, t.category),
-        txType: t.type,
+        categoryValue: `tx:${effType}:${effType === "carryover" ? "all" : t.category ?? "general"}`,
+        categoryLabel: getCategoryLabel(effType, t.category),
+        txType: effType,
         category: t.category,
         amount: t.amount,
         note: t.note ?? "",
@@ -159,7 +167,7 @@ export default function ReviewPanel() {
     }
 
     if (it.kind === "transaction") {
-      const amount = getAmountDisplay({ type: it.txType, amount: it.amount });
+      const amount = getAmountDisplay({ type: it.txType, amount: it.amount, category: it.category });
       return (
         <div
           key={it.key}
@@ -181,9 +189,7 @@ export default function ReviewPanel() {
           </div>
           <div className="flex shrink-0 items-center gap-3">
             <span
-              className={`text-sm font-semibold ${
-                amount.positive ? "text-green-500" : "text-red-500"
-              }`}
+              className={`text-sm font-semibold ${AMOUNT_TONE_CLASS[amount.tone]}`}
             >
               {amount.text}
             </span>
@@ -294,6 +300,9 @@ export default function ReviewPanel() {
                   {o.label}
                 </option>
               ))}
+            </optgroup>
+            <optgroup label="Transaksi · Sisa Bulan">
+              <option value="tx:carryover:all">Sisa Dibawa ke Bulan Depan</option>
             </optgroup>
           </>
         )}

@@ -1,4 +1,4 @@
-import { TransactionCategory } from "@/lib/types/finance";
+import { TransactionCategory, TransactionType } from "@/lib/types/finance";
 
 export type ReviewItem =
   | {
@@ -7,9 +7,9 @@ export type ReviewItem =
       key: string;
       date: string;
       createdAt: number;
-      categoryValue: string; // "tx:expense:<kategori>" | "tx:income:<kategori|general>"
+      categoryValue: string; // "tx:expense:<kategori>" | "tx:income:<kategori|general>" | "tx:carryover:all"
       categoryLabel: string;
-      txType: "income" | "expense";
+      txType: TransactionType; // sudah memperhitungkan data lama (sisa_dibawa = carryover)
       category: TransactionCategory | null;
       amount: number;
       note: string;

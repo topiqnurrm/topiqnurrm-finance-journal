@@ -1,5 +1,5 @@
 import * as XLSX from "xlsx";
-import { Transaction } from "@/lib/types/finance";
+import { Transaction, isCarryover, CARRYOVER_LABEL } from "@/lib/types/finance";
 import { JournalEntry } from "@/lib/types/journal";
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -38,8 +38,12 @@ export function exportToExcel({ transactions, journals, from, to }: ExportOption
 
   const transactionRows = filteredTransactions.map((t) => ({
     Tanggal: t.date,
-    Tipe: t.type === "income" ? "Pemasukan" : "Pengeluaran",
-    Kategori: t.category ? CATEGORY_LABELS[t.category] ?? t.category : "-",
+    Tipe: isCarryover(t) ? "Sisa Bulan" : t.type === "income" ? "Pemasukan" : "Pengeluaran",
+    Kategori: isCarryover(t)
+      ? CARRYOVER_LABEL
+      : t.category
+      ? CATEGORY_LABELS[t.category] ?? t.category
+      : "-",
     Jumlah: t.amount,
     Catatan: t.note || "-",
   }));
@@ -50,8 +54,8 @@ export function exportToExcel({ transactions, journals, from, to }: ExportOption
     Isi: j.content,
   }));
 
-  // Hutang/piutang tidak dihitung sebagai pemasukan maupun pengeluaran
-  const counted = filteredTransactions.filter((t) => t.category !== "hutang");
+  // Hutang/piutang dan sisa bulan tidak dihitung sebagai pemasukan maupun pengeluaran
+  const counted = filteredTransactions.filter((t) => t.category !== "hutang" && !isCarryover(t));
   const totalIncome = counted.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
   const totalExpense = counted.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
   const debtOut = filteredTransactions
@@ -61,15 +65,15 @@ export function exportToExcel({ transactions, journals, from, to }: ExportOption
     .filter((t) => t.category === "hutang" && t.type === "income")
     .reduce((s, t) => s + t.amount, 0);
   const carryOut = filteredTransactions
-    .filter((t) => t.category === "sisa_dibawa")
+    .filter((t) => isCarryover(t))
     .reduce((s, t) => s + t.amount, 0);
 
   // Dihitung dari baris yang ada di sheet Transaksi pada rentang ini
   const summaryRows = [
-    { Ringkasan: "Total Pemasukan (tanpa hutang/piutang)", Nilai: totalIncome },
-    { Ringkasan: "Total Pengeluaran (tanpa hutang/piutang)", Nilai: totalExpense },
+    { Ringkasan: "Total Pemasukan (tanpa hutang/piutang & sisa bulan)", Nilai: totalIncome },
+    { Ringkasan: "Total Pengeluaran (tanpa hutang/piutang & sisa bulan)", Nilai: totalExpense },
     { Ringkasan: "Selisih", Nilai: totalIncome - totalExpense },
-    { Ringkasan: "Sisa Dibawa ke Bulan Depan (sudah termasuk di pengeluaran)", Nilai: carryOut },
+    { Ringkasan: "Sisa Dibawa ke Bulan Depan (bukan pemasukan/pengeluaran)", Nilai: carryOut },
     { Ringkasan: "Hutang/Piutang Uang Keluar (tidak dihitung)", Nilai: debtOut },
     { Ringkasan: "Hutang/Piutang Uang Masuk (tidak dihitung)", Nilai: debtIn },
     { Ringkasan: "Jumlah Transaksi", Nilai: filteredTransactions.length },

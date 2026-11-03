@@ -7,8 +7,10 @@ import {
   INCOME_CATEGORIES,
   Transaction,
   getCategoryLabel,
+  isCarryover,
 } from "@/lib/types/finance";
 import { getAmountDisplay } from "@/lib/utils/finance";
+import { AMOUNT_TONE_CLASS } from "@/components/ui/amountTone";
 import { SortMode } from "@/components/ui/SortModeToggle";
 
 const PAGE_SIZE = 50;
@@ -42,6 +44,7 @@ function sortNewest(a: Transaction, b: Transaction) {
 
 function matchesCategory(t: Transaction, key: string) {
   const [type, cat] = key.split(":");
+  if (isCarryover(t)) return type === "carryover";
   if (t.type !== type) return false;
   if (type === "income" && cat === "general") return !t.category;
   return t.category === cat;
@@ -89,9 +92,7 @@ export default function FinanceList({ isOwner, selectedDate, sortMode, onEdit, e
         </div>
         <div className="flex items-center gap-3">
           <span
-            className={`text-sm font-semibold ${
-              amount.positive ? "text-green-500" : "text-red-500"
-            }`}
+            className={`text-sm font-semibold ${AMOUNT_TONE_CLASS[amount.tone]}`}
           >
             {amount.text}
           </span>
@@ -142,6 +143,9 @@ export default function FinanceList({ isOwner, selectedDate, sortMode, onEdit, e
                 {c.label}
               </option>
             ))}
+          </optgroup>
+          <optgroup label="Sisa Bulan">
+            <option value="carryover:all">Sisa Dibawa ke Bulan Depan</option>
           </optgroup>
         </select>
 

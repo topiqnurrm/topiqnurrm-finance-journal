@@ -19,9 +19,8 @@ export default function MonthOverview() {
     [transactions, monthId]
   );
 
-  // Hutang/piutang tidak dihitung; sisa bulan lalu ikut jadi pemasukan bulan ini
-  const { income, expense } = calcMonthTotals(transactions, monthId);
-  const sisaUang = income - expense;
+  // Hutang/piutang tidak dihitung; sisa bulan lalu dan sisa dibawa sudah diperhitungkan
+  const { sisaUang } = calcMonthTotals(transactions, monthId);
 
   const monthLabel = new Date().toLocaleDateString("id-ID", { month: "long", year: "numeric" });
 
@@ -36,7 +35,7 @@ export default function MonthOverview() {
         >
           {loadingFinance ? "..." : formatRupiah(sisaUang)}
         </p>
-        <p className="mt-1 text-xs text-neutral-600">Pemasukan − Pengeluaran bulan ini</p>
+        <p className="mt-1 text-xs text-neutral-600">Pemasukan + sisa bulan lalu − pengeluaran − sisa dibawa</p>
       </div>
 
       {loadingBudget ? (

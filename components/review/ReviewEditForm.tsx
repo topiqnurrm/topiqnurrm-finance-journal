@@ -49,7 +49,8 @@ function TransactionEdit({ item, onDone }: { item: TransactionReviewItem; onDone
     try {
       await updateItem<Transaction>("finances", item.id, {
         type,
-        category: type === "expense" ? category : incomeCategory || null,
+        category:
+          type === "expense" ? category : type === "income" ? incomeCategory || null : null,
         amount: parseInt(amount, 10),
         note,
         date,
@@ -88,6 +89,15 @@ function TransactionEdit({ item, onDone }: { item: TransactionReviewItem; onDone
         >
           Pemasukan
         </button>
+        <button
+          type="button"
+          onClick={() => setType("carryover")}
+          className={`flex-1 rounded-md py-2 text-sm ${
+            type === "carryover" ? "bg-sky-700 text-white" : "bg-neutral-800 text-neutral-400"
+          }`}
+        >
+          Sisa Bulan
+        </button>
       </div>
 
       {type === "expense" ? (
@@ -102,7 +112,7 @@ function TransactionEdit({ item, onDone }: { item: TransactionReviewItem; onDone
             </option>
           ))}
         </select>
-      ) : (
+      ) : type === "income" ? (
         <select
           value={incomeCategory}
           onChange={(e) => setIncomeCategory(e.target.value as IncomeCategory | "")}
@@ -114,7 +124,7 @@ function TransactionEdit({ item, onDone }: { item: TransactionReviewItem; onDone
             </option>
           ))}
         </select>
-      )}
+      ) : null}
 
       <input
         type="number"

@@ -1,4 +1,6 @@
-export type TransactionType = "income" | "expense";
+// "carryover" = sisa uang akhir bulan yang dibawa ke bulan berikutnya.
+// Bukan pemasukan dan bukan pengeluaran.
+export type TransactionType = "income" | "expense" | "carryover";
 
 export type ExpenseCategory =
   | "kehidupan"
@@ -8,8 +10,8 @@ export type ExpenseCategory =
   | "grooming"
   | "dana_darurat"
   | "audit"
-  | "sisa_dibawa" // sisa uang akhir bulan -> otomatis dihitung sebagai pemasukan bulan berikutnya
-  | "hutang"; // hutang / piutang -> tidak dihitung sebagai pemasukan maupun pengeluaran
+  | "hutang" // hutang / piutang -> tidak dihitung sebagai pemasukan maupun pengeluaran
+  | "sisa_dibawa"; // DATA LAMA: dulu sisa bulan dicatat sebagai pengeluaran, kini otomatis dianggap "carryover"
 
 // Jenis pada pemasukan. Pemasukan biasa = category null.
 export type IncomeCategory = "audit" | "hutang";
@@ -26,6 +28,9 @@ export interface Transaction {
   createdAt: number;
 }
 
+export const CARRYOVER_LABEL = "Sisa Dibawa ke Bulan Depan";
+
+// "sisa_dibawa" sengaja tidak ada di daftar ini (sudah jadi jenis sendiri)
 export const EXPENSE_CATEGORIES: { value: ExpenseCategory; label: string }[] = [
   { value: "kehidupan", label: "Kehidupan" },
   { value: "mendadak", label: "Mendadak" },
@@ -34,7 +39,6 @@ export const EXPENSE_CATEGORIES: { value: ExpenseCategory; label: string }[] = [
   { value: "grooming", label: "Grooming" },
   { value: "dana_darurat", label: "Dana Darurat" },
   { value: "audit", label: "Audit" },
-  { value: "sisa_dibawa", label: "Sisa Dibawa ke Bulan Depan" },
   { value: "hutang", label: "Hutang / Piutang" },
 ];
 
@@ -45,10 +49,23 @@ export const INCOME_CATEGORIES: { value: IncomeCategory | ""; label: string }[] 
   { value: "hutang", label: "Hutang / Piutang" },
 ];
 
+// Termasuk data lama: pengeluaran berkategori "sisa_dibawa" dianggap carryover
+export function isCarryover(t: { type: TransactionType; category: TransactionCategory | null }) {
+  return t.type === "carryover" || t.category === "sisa_dibawa";
+}
+
+export function getEffectiveType(t: {
+  type: TransactionType;
+  category: TransactionCategory | null;
+}): TransactionType {
+  return isCarryover(t) ? "carryover" : t.type;
+}
+
 export function getCategoryLabel(
   type: TransactionType,
   category: TransactionCategory | null
 ): string {
+  if (type === "carryover" || category === "sisa_dibawa") return CARRYOVER_LABEL;
   if (type === "income") {
     if (!category) return "Pemasukan";
     const label = INCOME_CATEGORIES.find((c) => c.value === category)?.label ?? category;

@@ -7,6 +7,7 @@ import { formatRupiah } from "@/lib/utils/currency";
 import { getLocalDateStr, shiftDate } from "@/lib/utils/date";
 import { getAmountDisplay, sumIncomeExpense } from "@/lib/utils/finance";
 import { getCategoryLabel } from "@/lib/types/finance";
+import { AMOUNT_TONE_CLASS } from "@/components/ui/amountTone";
 
 function formatDateLabel(dateStr: string) {
   const d = new Date(dateStr + "T00:00:00");
@@ -115,7 +116,7 @@ export default function TodayOverview() {
               return (
                 <div key={t.id} className="border-l-2 border-neutral-700 pl-3 flex justify-between text-sm">
                   <span className="text-neutral-400">{t.note || getCategoryLabel(t.type, t.category)}</span>
-                  <span className={amount.positive ? "text-green-500" : "text-red-500"}>
+                  <span className={AMOUNT_TONE_CLASS[amount.tone]}>
                     {amount.text}
                   </span>
                 </div>

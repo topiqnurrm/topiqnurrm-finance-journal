@@ -42,6 +42,7 @@ export default function AnalysisPage() {
     expense: totalExpense,
     carryIn,
     carryOut,
+    sisaUang,
   } = calcMonthTotals(transactions, monthId);
 
   const totalBudgetAllocated = budget
@@ -53,8 +54,8 @@ export default function AnalysisPage() {
       (budget.dana_darurat ?? 0) +
       (budget.audit ?? 0)
     : 0;
-  const sisaBudget = totalIncome - totalBudgetAllocated;
-  const sisaUang = totalIncome - totalExpense;
+  // Uang yang tersedia bulan ini = pemasukan + sisa dari bulan lalu
+  const sisaBudget = totalIncome + carryIn - totalBudgetAllocated;
 
   // Piutang belum lunas, kumulatif sampai akhir bulan yang dipilih
   const piutang = calcDebtBalance(transactions, monthId);
@@ -115,24 +116,29 @@ export default function AnalysisPage() {
           <p className="text-lg font-semibold text-green-400 break-words">
             {formatRupiah(totalIncome)}
           </p>
-          {carryIn !== 0 && (
-            <p className="mt-1 text-xs text-neutral-600">
-              termasuk sisa bulan lalu {formatRupiah(carryIn)}
-            </p>
-          )}
         </div>
         <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 min-w-0">
           <p className="text-sm text-neutral-400">Pengeluaran Bulan Ini</p>
           <p className="text-lg font-semibold text-red-400 break-words">
             {formatRupiah(totalExpense)}
           </p>
-          {carryOut !== 0 && (
-            <p className="mt-1 text-xs text-neutral-600">
-              termasuk sisa dibawa ke bulan depan {formatRupiah(carryOut)}
-            </p>
-          )}
         </div>
       </div>
+
+      {(carryIn !== 0 || carryOut !== 0) && (
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 min-w-0">
+            <p className="text-sm text-neutral-400">Sisa Bulan Lalu</p>
+            <p className="text-lg font-semibold text-sky-400 break-words">{formatRupiah(carryIn)}</p>
+            <p className="mt-1 text-xs text-neutral-600">Dibawa dari bulan sebelumnya</p>
+          </div>
+          <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 min-w-0">
+            <p className="text-sm text-neutral-400">Dibawa ke Bulan Depan</p>
+            <p className="text-lg font-semibold text-sky-400 break-words">{formatRupiah(carryOut)}</p>
+            <p className="mt-1 text-xs text-neutral-600">Bukan pengeluaran</p>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 min-w-0">
@@ -140,7 +146,11 @@ export default function AnalysisPage() {
           <p className={`text-lg font-semibold break-words ${sisaUang < 0 ? "text-red-400" : "text-green-400"}`}>
             {formatRupiah(sisaUang)}
           </p>
-          <p className="mt-1 text-xs text-neutral-600">Pemasukan − Pengeluaran</p>
+          <p className="mt-1 text-xs text-neutral-600">
+            {carryIn !== 0 || carryOut !== 0
+              ? "Pemasukan + sisa bulan lalu − pengeluaran − sisa dibawa"
+              : "Pemasukan − Pengeluaran"}
+          </p>
         </div>
         <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 min-w-0">
           <p className="text-sm text-neutral-400">Piutang</p>
@@ -180,6 +190,11 @@ export default function AnalysisPage() {
         <p className={`text-lg font-semibold break-words ${sisaBudget < 0 ? "text-red-400" : "text-green-400"}`}>
           {formatRupiah(sisaBudget)}
         </p>
+        {carryIn !== 0 && (
+          <p className="mt-1 text-xs text-neutral-600">
+            termasuk sisa bulan lalu {formatRupiah(carryIn)}
+          </p>
+        )}
       </div>
 
       {/* Form set budget hanya untuk owner; read-only tidak melihatnya sama sekali */}
