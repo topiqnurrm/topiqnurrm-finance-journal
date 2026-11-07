@@ -9,6 +9,7 @@ import {
   INCOME_CATEGORIES,
   getCategoryLabel,
   getEffectiveType,
+  WITHDRAWAL_CATEGORIES,
 } from "@/lib/types/finance";
 import { getAmountDisplay } from "@/lib/utils/finance";
 import { AMOUNT_TONE_CLASS } from "@/components/ui/amountTone";
@@ -114,6 +115,10 @@ export default function ReviewPanel() {
   const incomeOptions = INCOME_CATEGORIES.map((c) => ({
     value: `tx:income:${c.value || "general"}`,
     label: c.value ? c.label : "Pemasukan (biasa)",
+  }));
+  const withdrawalOptions = WITHDRAWAL_CATEGORIES.map((c) => ({
+    value: `tx:withdrawal:${c.value}`,
+    label: `Ambil ${c.label}`,
   }));
   const journalOptions = categories.map((c) => ({ value: `jr:${c.id}`, label: c.name }));
 
@@ -303,6 +308,13 @@ export default function ReviewPanel() {
             </optgroup>
             <optgroup label="Transaksi · Sisa Bulan">
               <option value="tx:carryover:all">Sisa Dibawa ke Bulan Depan</option>
+            </optgroup>
+            <optgroup label="Transaksi · Ambil Tabungan">
+              {withdrawalOptions.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
             </optgroup>
           </>
         )}

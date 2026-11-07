@@ -16,7 +16,8 @@ export interface MonthTotals {
   expense: number; // pengeluaran bulan ini (tanpa hutang, tanpa sisa dibawa)
   carryIn: number; // sisa uang dari bulan lalu
   carryOut: number; // sisa uang yang dibawa ke bulan depan
-  sisaUang: number; // income + carryIn - expense - carryOut
+  withdrawal: number; // uang diambil dari tabungan / dana darurat bulan ini
+  sisaUang: number; // income + carryIn + withdrawal - expense - carryOut
   debtOut: number; // hutang/piutang uang keluar (tidak dihitung)
   debtIn: number; // hutang/piutang uang masuk (tidak dihitung)
 }
@@ -32,6 +33,7 @@ export function calcMonthTotals(transactions: TxLike[], monthId: string): MonthT
     expense: 0,
     carryIn: 0,
     carryOut: 0,
+    withdrawal: 0,
     sisaUang: 0,
     debtOut: 0,
     debtIn: 0,
@@ -56,11 +58,27 @@ export function calcMonthTotals(transactions: TxLike[], monthId: string): MonthT
 
     if (m !== monthId) continue;
     if (t.type === "income") r.income += t.amount;
-    else r.expense += t.amount;
+    else if (t.type === "expense") r.expense += t.amount;
+    else if (t.type === "withdrawal") r.withdrawal += t.amount;
   }
 
-  r.sisaUang = r.income + r.carryIn - r.expense - r.carryOut;
+  r.sisaUang = r.income + r.carryIn + r.withdrawal - r.expense - r.carryOut;
   return r;
+}
+
+// Saldo Tabungan & Dana Darurat kumulatif sampai akhir bulan yang dipilih:
+// setoran (pengeluaran berkategori tabungan / dana_darurat) dikurangi pengambilan.
+export function calcSavingsBalance(transactions: TxLike[], upToMonthId: string) {
+  let tabungan = 0;
+  let danaDarurat = 0;
+  for (const t of transactions) {
+    if (t.date.slice(0, 7) > upToMonthId) continue;
+    const sign = t.type === "expense" ? 1 : t.type === "withdrawal" ? -1 : 0;
+    if (sign === 0) continue;
+    if (t.category === "tabungan") tabungan += sign * t.amount;
+    else if (t.category === "dana_darurat") danaDarurat += sign * t.amount;
+  }
+  return { tabungan, danaDarurat };
 }
 
 // Saldo hutang/piutang yang belum lunas, kumulatif sampai akhir bulan yang dipilih.
@@ -83,7 +101,7 @@ export function sumIncomeExpense(list: TxLike[]) {
   for (const t of list) {
     if (t.category === "hutang" || isCarryover(t)) continue;
     if (t.type === "income") income += t.amount;
-    else expense += t.amount;
+    else if (t.type === "expense") expense += t.amount;
   }
   return { income, expense };
 }
@@ -91,12 +109,17 @@ export function sumIncomeExpense(list: TxLike[]) {
 // Tampilan nominal:
 // - pengeluaran bernilai minus (mis. -5000) tampil +Rp 5.000 hijau
 // - sisa bulan tampil netral tanpa tanda +/-
+// - ambil tabungan / dana darurat tampil netral dengan tanda +
 export function getAmountDisplay(t: Pick<Transaction, "type" | "amount" | "category">): {
   tone: AmountTone;
   text: string;
 } {
   if (isCarryover(t)) {
     return { tone: "neutral", text: formatRupiah(t.amount) };
+  }
+  if (t.type === "withdrawal") {
+    // uang masuk ke kantong, tapi bukan pemasukan -> warna netral
+    return { tone: "neutral", text: `+${formatRupiah(t.amount)}` };
   }
   const positive = t.type === "income" ? t.amount >= 0 : t.amount < 0;
   return {

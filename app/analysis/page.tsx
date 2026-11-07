@@ -8,7 +8,7 @@ import MonthlyChart from "@/components/analysis/MonthlyChart";
 import CategoryBreakdown from "@/components/analysis/CategoryBreakdown";
 import { formatRupiah } from "@/lib/utils/currency";
 import BackButton from "@/components/ui/BackButton";
-import { calcDebtBalance, calcMonthTotals } from "@/lib/utils/finance";
+import { calcDebtBalance, calcMonthTotals, calcSavingsBalance } from "@/lib/utils/finance";
 
 function getCurrentMonthId() {
   const now = new Date();
@@ -33,7 +33,8 @@ export default function AnalysisPage() {
   const { budget, loading, saveBudget } = useBudget(monthId);
 
   const monthlyTransactions = useMemo(
-    () => transactions.filter((f) => f.date.startsWith(monthId)),
+    // pengambilan tabungan bukan pengeluaran, jangan ikut hitungan budget/kategori
+    () => transactions.filter((f) => f.date.startsWith(monthId) && f.type !== "withdrawal"),
     [transactions, monthId]
   );
   // Hutang/piutang tidak dihitung; sisa bulan lalu otomatis jadi pemasukan bulan ini
@@ -42,6 +43,7 @@ export default function AnalysisPage() {
     expense: totalExpense,
     carryIn,
     carryOut,
+    withdrawal,
     sisaUang,
   } = calcMonthTotals(transactions, monthId);
 
@@ -62,12 +64,11 @@ export default function AnalysisPage() {
 
   // Total terkumpul kumulatif sampai akhir bulan yang dipilih:
   // semua transaksi dengan bulan <= monthId (format YYYY-MM bisa dibandingkan sebagai string)
-  const totalTabungan = transactions
-    .filter((t) => t.type === "expense" && t.category === "tabungan" && t.date.slice(0, 7) <= monthId)
-    .reduce((s, t) => s + t.amount, 0);
-  const totalDanaDarurat = transactions
-    .filter((t) => t.type === "expense" && t.category === "dana_darurat" && t.date.slice(0, 7) <= monthId)
-    .reduce((s, t) => s + t.amount, 0);
+  // dikurangi pengambilan (jenis "Ambil Tabungan")
+  const { tabungan: totalTabungan, danaDarurat: totalDanaDarurat } = calcSavingsBalance(
+    transactions,
+    monthId
+  );
 
   const isCurrentMonth = monthId === getCurrentMonthId();
 
@@ -140,6 +141,14 @@ export default function AnalysisPage() {
         </div>
       )}
 
+      {withdrawal !== 0 && (
+        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 min-w-0">
+          <p className="text-sm text-neutral-400">Diambil dari Tabungan / Dana Darurat</p>
+          <p className="text-lg font-semibold text-amber-400 break-words">{formatRupiah(withdrawal)}</p>
+          <p className="mt-1 text-xs text-neutral-600">Menambah Sisa Uang, bukan pemasukan</p>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 min-w-0">
           <p className="text-sm text-neutral-400">Sisa Uang</p>
@@ -147,8 +156,8 @@ export default function AnalysisPage() {
             {formatRupiah(sisaUang)}
           </p>
           <p className="mt-1 text-xs text-neutral-600">
-            {carryIn !== 0 || carryOut !== 0
-              ? "Pemasukan + sisa bulan lalu − pengeluaran − sisa dibawa"
+            {carryIn !== 0 || carryOut !== 0 || withdrawal !== 0
+              ? "Pemasukan + sisa bulan lalu + ambil tabungan − pengeluaran − sisa dibawa"
               : "Pemasukan − Pengeluaran"}
           </p>
         </div>
@@ -174,14 +183,14 @@ export default function AnalysisPage() {
           <p className="text-lg font-semibold text-blue-400 break-words">
             {formatRupiah(totalTabungan)}
           </p>
-          <p className="mt-1 text-xs text-neutral-600">Terkumpul sampai akhir {formatMonthLabel(monthId)}</p>
+          <p className="mt-1 text-xs text-neutral-600">Setoran − pengambilan sampai akhir {formatMonthLabel(monthId)}</p>
         </div>
         <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 min-w-0">
           <p className="text-sm text-neutral-400">Total Dana Darurat</p>
           <p className="text-lg font-semibold text-blue-400 break-words">
             {formatRupiah(totalDanaDarurat)}
           </p>
-          <p className="mt-1 text-xs text-neutral-600">Terkumpul sampai akhir {formatMonthLabel(monthId)}</p>
+          <p className="mt-1 text-xs text-neutral-600">Setoran − pengambilan sampai akhir {formatMonthLabel(monthId)}</p>
         </div>
       </div>
 

@@ -4,8 +4,10 @@ import { useState } from "react";
 import {
   EXPENSE_CATEGORIES,
   INCOME_CATEGORIES,
+  WITHDRAWAL_CATEGORIES,
   ExpenseCategory,
   IncomeCategory,
+  WithdrawalCategory,
   Transaction,
   TransactionType,
 } from "@/lib/types/finance";
@@ -35,6 +37,9 @@ function TransactionEdit({ item, onDone }: { item: TransactionReviewItem; onDone
   const [incomeCategory, setIncomeCategory] = useState<IncomeCategory | "">(
     item.txType === "income" && item.category ? (item.category as IncomeCategory) : ""
   );
+  const [withdrawCategory, setWithdrawCategory] = useState<WithdrawalCategory>(
+    item.txType === "withdrawal" && item.category === "dana_darurat" ? "dana_darurat" : "tabungan"
+  );
   const [amount, setAmount] = useState(String(item.amount));
   const [note, setNote] = useState(item.note);
   const [date, setDate] = useState(item.date);
@@ -50,7 +55,13 @@ function TransactionEdit({ item, onDone }: { item: TransactionReviewItem; onDone
       await updateItem<Transaction>("finances", item.id, {
         type,
         category:
-          type === "expense" ? category : type === "income" ? incomeCategory || null : null,
+          type === "expense"
+            ? category
+            : type === "income"
+            ? incomeCategory || null
+            : type === "withdrawal"
+            ? withdrawCategory
+            : null,
         amount: parseInt(amount, 10),
         note,
         date,
@@ -70,11 +81,11 @@ function TransactionEdit({ item, onDone }: { item: TransactionReviewItem; onDone
     >
       <p className="text-xs text-blue-400">Mengedit transaksi tanggal {item.date}</p>
 
-      <div className="flex gap-2">
+      <div className="grid grid-cols-2 gap-2">
         <button
           type="button"
           onClick={() => setType("expense")}
-          className={`flex-1 rounded-md py-2 text-sm ${
+          className={`rounded-md py-2 text-sm ${
             type === "expense" ? "bg-red-600 text-white" : "bg-neutral-800 text-neutral-400"
           }`}
         >
@@ -83,7 +94,7 @@ function TransactionEdit({ item, onDone }: { item: TransactionReviewItem; onDone
         <button
           type="button"
           onClick={() => setType("income")}
-          className={`flex-1 rounded-md py-2 text-sm ${
+          className={`rounded-md py-2 text-sm ${
             type === "income" ? "bg-green-600 text-white" : "bg-neutral-800 text-neutral-400"
           }`}
         >
@@ -92,11 +103,20 @@ function TransactionEdit({ item, onDone }: { item: TransactionReviewItem; onDone
         <button
           type="button"
           onClick={() => setType("carryover")}
-          className={`flex-1 rounded-md py-2 text-sm ${
+          className={`rounded-md py-2 text-sm ${
             type === "carryover" ? "bg-sky-700 text-white" : "bg-neutral-800 text-neutral-400"
           }`}
         >
           Sisa Bulan
+        </button>
+        <button
+          type="button"
+          onClick={() => setType("withdrawal")}
+          className={`rounded-md py-2 text-sm ${
+            type === "withdrawal" ? "bg-amber-600 text-white" : "bg-neutral-800 text-neutral-400"
+          }`}
+        >
+          Ambil Tabungan
         </button>
       </div>
 
@@ -121,6 +141,18 @@ function TransactionEdit({ item, onDone }: { item: TransactionReviewItem; onDone
           {INCOME_CATEGORIES.map((c) => (
             <option key={c.value || "general"} value={c.value}>
               {c.label}
+            </option>
+          ))}
+        </select>
+      ) : type === "withdrawal" ? (
+        <select
+          value={withdrawCategory}
+          onChange={(e) => setWithdrawCategory(e.target.value as WithdrawalCategory)}
+          className="w-full min-w-0 rounded-md bg-neutral-800 p-2 text-sm"
+        >
+          {WITHDRAWAL_CATEGORIES.map((c) => (
+            <option key={c.value} value={c.value}>
+              Ambil dari {c.label}
             </option>
           ))}
         </select>

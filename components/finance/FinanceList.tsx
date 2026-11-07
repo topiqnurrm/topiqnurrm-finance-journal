@@ -5,6 +5,7 @@ import { useFinance } from "@/lib/hooks/useFinance";
 import {
   EXPENSE_CATEGORIES,
   INCOME_CATEGORIES,
+  WITHDRAWAL_CATEGORIES,
   Transaction,
   getCategoryLabel,
   isCarryover,
@@ -34,6 +35,11 @@ const EXPENSE_OPTIONS = EXPENSE_CATEGORIES.map((c) => ({
 const INCOME_OPTIONS = INCOME_CATEGORIES.map((c) => ({
   value: `income:${c.value || "general"}`,
   label: c.value ? c.label : "Pemasukan (biasa)",
+}));
+
+const WITHDRAWAL_OPTIONS = WITHDRAWAL_CATEGORIES.map((c) => ({
+  value: `withdrawal:${c.value}`,
+  label: `Ambil ${c.label}`,
 }));
 
 // Terbaru di atas: tanggal desc, lalu waktu input desc
@@ -146,6 +152,13 @@ export default function FinanceList({ isOwner, selectedDate, sortMode, onEdit, e
           </optgroup>
           <optgroup label="Sisa Bulan">
             <option value="carryover:all">Sisa Dibawa ke Bulan Depan</option>
+          </optgroup>
+          <optgroup label="Ambil Tabungan">
+            {WITHDRAWAL_OPTIONS.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
+            ))}
           </optgroup>
         </select>
 

@@ -5,8 +5,10 @@ import { useFinance } from "@/lib/hooks/useFinance";
 import {
   EXPENSE_CATEGORIES,
   INCOME_CATEGORIES,
+  WITHDRAWAL_CATEGORIES,
   ExpenseCategory,
   IncomeCategory,
+  WithdrawalCategory,
   Transaction,
   TransactionType,
   getEffectiveType,
@@ -26,6 +28,7 @@ export default function FinanceForm({ editingTransaction, onCancelEdit, onSavedE
   const [type, setType] = useState<TransactionType>("expense");
   const [category, setCategory] = useState<ExpenseCategory>("kehidupan");
   const [incomeCategory, setIncomeCategory] = useState<IncomeCategory | "">("");
+  const [withdrawCategory, setWithdrawCategory] = useState<WithdrawalCategory>("tabungan");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [date, setDate] = useState(getLocalDateStr());
@@ -41,6 +44,7 @@ export default function FinanceForm({ editingTransaction, onCancelEdit, onSavedE
       setType(effType);
       setCategory(effType === "expense" && cat ? (cat as ExpenseCategory) : "kehidupan");
       setIncomeCategory(effType === "income" && cat ? (cat as IncomeCategory) : "");
+      setWithdrawCategory(effType === "withdrawal" && cat === "dana_darurat" ? "dana_darurat" : "tabungan");
       setAmount(String(editingTransaction.amount));
       setNote(editingTransaction.note || "");
       setDate(editingTransaction.date);
@@ -48,6 +52,7 @@ export default function FinanceForm({ editingTransaction, onCancelEdit, onSavedE
       setType("expense");
       setCategory("kehidupan");
       setIncomeCategory("");
+      setWithdrawCategory("tabungan");
       setAmount("");
       setNote("");
       setDate(getLocalDateStr());
@@ -56,7 +61,9 @@ export default function FinanceForm({ editingTransaction, onCancelEdit, onSavedE
 
   // Keterangan singkat untuk jenis khusus
   const hint =
-    type === "carryover"
+    type === "withdrawal"
+      ? "Mengambil uang dari tabungan / dana darurat. Mengurangi totalnya dan menambah Sisa Uang bulan ini. Bukan pemasukan dan bukan pengeluaran."
+      : type === "carryover"
       ? "Sisa uang akhir bulan. Bukan pemasukan dan bukan pengeluaran; otomatis tampil sebagai sisa bulan lalu di bulan berikutnya."
       : (type === "expense" && category === "hutang") || (type === "income" && incomeCategory === "hutang")
       ? "Hutang/piutang tidak dihitung sebagai pemasukan maupun pengeluaran."
@@ -76,7 +83,13 @@ export default function FinanceForm({ editingTransaction, onCancelEdit, onSavedE
     const payload = {
       type,
       category:
-        type === "expense" ? category : type === "income" ? incomeCategory || null : null,
+        type === "expense"
+          ? category
+          : type === "income"
+          ? incomeCategory || null
+          : type === "withdrawal"
+          ? withdrawCategory
+          : null,
       amount: parseInt(amount, 10),
       note,
       date,
@@ -102,11 +115,11 @@ export default function FinanceForm({ editingTransaction, onCancelEdit, onSavedE
         </p>
       )}
 
-      <div className="flex gap-2">
+      <div className="grid grid-cols-2 gap-2">
         <button
           type="button"
           onClick={() => setType("expense")}
-          className={`flex-1 rounded-md py-2 text-sm ${
+          className={`rounded-md py-2 text-sm ${
             type === "expense" ? "bg-red-600 text-white" : "bg-neutral-800 text-neutral-400"
           }`}
         >
@@ -115,7 +128,7 @@ export default function FinanceForm({ editingTransaction, onCancelEdit, onSavedE
         <button
           type="button"
           onClick={() => setType("income")}
-          className={`flex-1 rounded-md py-2 text-sm ${
+          className={`rounded-md py-2 text-sm ${
             type === "income" ? "bg-green-600 text-white" : "bg-neutral-800 text-neutral-400"
           }`}
         >
@@ -124,11 +137,20 @@ export default function FinanceForm({ editingTransaction, onCancelEdit, onSavedE
         <button
           type="button"
           onClick={() => setType("carryover")}
-          className={`flex-1 rounded-md py-2 text-sm ${
+          className={`rounded-md py-2 text-sm ${
             type === "carryover" ? "bg-sky-700 text-white" : "bg-neutral-800 text-neutral-400"
           }`}
         >
           Sisa Bulan
+        </button>
+        <button
+          type="button"
+          onClick={() => setType("withdrawal")}
+          className={`rounded-md py-2 text-sm ${
+            type === "withdrawal" ? "bg-amber-600 text-white" : "bg-neutral-800 text-neutral-400"
+          }`}
+        >
+          Ambil Tabungan
         </button>
       </div>
 
@@ -153,6 +175,18 @@ export default function FinanceForm({ editingTransaction, onCancelEdit, onSavedE
           {INCOME_CATEGORIES.map((c) => (
             <option key={c.value || "general"} value={c.value}>
               {c.label}
+            </option>
+          ))}
+        </select>
+      ) : type === "withdrawal" ? (
+        <select
+          value={withdrawCategory}
+          onChange={(e) => setWithdrawCategory(e.target.value as WithdrawalCategory)}
+          className="w-full rounded-md bg-neutral-800 p-2 text-sm"
+        >
+          {WITHDRAWAL_CATEGORIES.map((c) => (
+            <option key={c.value} value={c.value}>
+              Ambil dari {c.label}
             </option>
           ))}
         </select>

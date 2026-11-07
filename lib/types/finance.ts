@@ -1,6 +1,8 @@
 // "carryover" = sisa uang akhir bulan yang dibawa ke bulan berikutnya.
 // Bukan pemasukan dan bukan pengeluaran.
-export type TransactionType = "income" | "expense" | "carryover";
+// "withdrawal" = pengambilan uang dari Tabungan / Dana Darurat ke uang sehari-hari.
+// Bukan pemasukan dan bukan pengeluaran.
+export type TransactionType = "income" | "expense" | "carryover" | "withdrawal";
 
 export type ExpenseCategory =
   | "kehidupan"
@@ -15,6 +17,9 @@ export type ExpenseCategory =
 
 // Jenis pada pemasukan. Pemasukan biasa = category null.
 export type IncomeCategory = "audit" | "hutang";
+
+// Sumber pengambilan (disimpan di field category pada type "withdrawal")
+export type WithdrawalCategory = "tabungan" | "dana_darurat";
 
 export type TransactionCategory = ExpenseCategory | IncomeCategory;
 
@@ -42,6 +47,11 @@ export const EXPENSE_CATEGORIES: { value: ExpenseCategory; label: string }[] = [
   { value: "hutang", label: "Hutang / Piutang" },
 ];
 
+export const WITHDRAWAL_CATEGORIES: { value: WithdrawalCategory; label: string }[] = [
+  { value: "tabungan", label: "Tabungan" },
+  { value: "dana_darurat", label: "Dana Darurat" },
+];
+
 // value "" = pemasukan biasa (category null)
 export const INCOME_CATEGORIES: { value: IncomeCategory | ""; label: string }[] = [
   { value: "", label: "Pemasukan" },
@@ -66,6 +76,10 @@ export function getCategoryLabel(
   category: TransactionCategory | null
 ): string {
   if (type === "carryover" || category === "sisa_dibawa") return CARRYOVER_LABEL;
+  if (type === "withdrawal") {
+    const label = WITHDRAWAL_CATEGORIES.find((c) => c.value === category)?.label ?? "Tabungan";
+    return `Ambil ${label}`;
+  }
   if (type === "income") {
     if (!category) return "Pemasukan";
     const label = INCOME_CATEGORIES.find((c) => c.value === category)?.label ?? category;

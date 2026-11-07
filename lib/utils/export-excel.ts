@@ -38,7 +38,13 @@ export function exportToExcel({ transactions, journals, from, to }: ExportOption
 
   const transactionRows = filteredTransactions.map((t) => ({
     Tanggal: t.date,
-    Tipe: isCarryover(t) ? "Sisa Bulan" : t.type === "income" ? "Pemasukan" : "Pengeluaran",
+    Tipe: isCarryover(t)
+      ? "Sisa Bulan"
+      : t.type === "withdrawal"
+      ? "Ambil Tabungan"
+      : t.type === "income"
+      ? "Pemasukan"
+      : "Pengeluaran",
     Kategori: isCarryover(t)
       ? CARRYOVER_LABEL
       : t.category
@@ -55,7 +61,9 @@ export function exportToExcel({ transactions, journals, from, to }: ExportOption
   }));
 
   // Hutang/piutang dan sisa bulan tidak dihitung sebagai pemasukan maupun pengeluaran
-  const counted = filteredTransactions.filter((t) => t.category !== "hutang" && !isCarryover(t));
+  const counted = filteredTransactions.filter(
+    (t) => t.category !== "hutang" && !isCarryover(t) && t.type !== "withdrawal"
+  );
   const totalIncome = counted.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
   const totalExpense = counted.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
   const debtOut = filteredTransactions
@@ -68,12 +76,21 @@ export function exportToExcel({ transactions, journals, from, to }: ExportOption
     .filter((t) => isCarryover(t))
     .reduce((s, t) => s + t.amount, 0);
 
+  const withdrawTabungan = filteredTransactions
+    .filter((t) => t.type === "withdrawal" && t.category === "tabungan")
+    .reduce((s, t) => s + t.amount, 0);
+  const withdrawDana = filteredTransactions
+    .filter((t) => t.type === "withdrawal" && t.category === "dana_darurat")
+    .reduce((s, t) => s + t.amount, 0);
+
   // Dihitung dari baris yang ada di sheet Transaksi pada rentang ini
   const summaryRows = [
     { Ringkasan: "Total Pemasukan (tanpa hutang/piutang & sisa bulan)", Nilai: totalIncome },
     { Ringkasan: "Total Pengeluaran (tanpa hutang/piutang & sisa bulan)", Nilai: totalExpense },
     { Ringkasan: "Selisih", Nilai: totalIncome - totalExpense },
     { Ringkasan: "Sisa Dibawa ke Bulan Depan (bukan pemasukan/pengeluaran)", Nilai: carryOut },
+    { Ringkasan: "Diambil dari Tabungan (bukan pemasukan/pengeluaran)", Nilai: withdrawTabungan },
+    { Ringkasan: "Diambil dari Dana Darurat (bukan pemasukan/pengeluaran)", Nilai: withdrawDana },
     { Ringkasan: "Hutang/Piutang Uang Keluar (tidak dihitung)", Nilai: debtOut },
     { Ringkasan: "Hutang/Piutang Uang Masuk (tidak dihitung)", Nilai: debtIn },
     { Ringkasan: "Jumlah Transaksi", Nilai: filteredTransactions.length },
