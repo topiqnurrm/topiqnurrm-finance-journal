@@ -57,8 +57,9 @@ export default function AnalysisPage() {
       (budget.dana_darurat ?? 0) +
       (budget.audit ?? 0)
     : 0;
-  // Uang yang tersedia bulan ini = pemasukan + sisa dari bulan lalu
-  const sisaBudget = totalIncome + carryIn - totalBudgetAllocated;
+  // Semua uang masuk bulan ini = pemasukan + sisa bulan lalu + diambil dari tabungan / dana darurat
+  const totalDana = totalIncome + carryIn + withdrawal;
+  const sisaBudget = totalDana - totalBudgetAllocated;
 
   // Piutang belum lunas, kumulatif sampai akhir bulan yang dipilih
   const piutang = calcDebtBalance(transactions, monthId);
@@ -196,13 +197,16 @@ export default function AnalysisPage() {
       </div>
 
       <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 min-w-0">
-        <p className="text-sm text-neutral-400">Sisa (Pemasukan − Total Budget)</p>
+        <p className="text-sm text-neutral-400">Sisa (Semua Pemasukan − Total Budget)</p>
         <p className={`text-lg font-semibold break-words ${sisaBudget < 0 ? "text-red-400" : "text-green-400"}`}>
           {formatRupiah(sisaBudget)}
         </p>
-        {carryIn !== 0 && (
+        {(carryIn !== 0 || withdrawal !== 0) && (
           <p className="mt-1 text-xs text-neutral-600">
-            termasuk sisa bulan lalu {formatRupiah(carryIn)}
+            Pemasukan {formatRupiah(totalIncome)}
+            {carryIn !== 0 && ` + sisa bulan lalu ${formatRupiah(carryIn)}`}
+            {withdrawal !== 0 && ` + ambil tabungan/dana darurat ${formatRupiah(withdrawal)}`}
+            {` = ${formatRupiah(totalDana)}`}
           </p>
         )}
       </div>
