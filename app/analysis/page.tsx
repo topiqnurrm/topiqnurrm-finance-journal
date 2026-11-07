@@ -8,6 +8,7 @@ import MonthlyChart from "@/components/analysis/MonthlyChart";
 import CategoryBreakdown from "@/components/analysis/CategoryBreakdown";
 import { formatRupiah } from "@/lib/utils/currency";
 import BackButton from "@/components/ui/BackButton";
+import AssetNotes from "@/components/analysis/AssetNotes";
 import { calcDebtBalance, calcMonthTotals, calcSavingsBalance } from "@/lib/utils/finance";
 
 function getCurrentMonthId() {
@@ -213,6 +214,9 @@ export default function AnalysisPage() {
 
       <MonthlyChart income={totalIncome} expense={totalExpense} />
       <CategoryBreakdown budget={budget} transactions={monthlyTransactions} />
+
+      {/* Catatan aset: tidak terikat bulan; hanya owner yang bisa menambah/ubah */}
+      <AssetNotes isOwner={isOwner} />
     </div>
   );
 }
