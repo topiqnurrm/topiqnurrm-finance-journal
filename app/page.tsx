@@ -5,7 +5,9 @@ import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
 import LogoutButton from "@/components/auth/LogoutButton";
 import TodayOverview from "@/components/dashboard/TodayOverview";
 import MonthOverview from "@/components/dashboard/MonthOverview";
+import BudgetOverview from "@/components/dashboard/BudgetOverview";
 import QuickAdd from "@/components/dashboard/QuickAdd";
+import Reminders from "@/components/dashboard/Reminders";
 
 export default function DashboardPage() {
   const { user, loading, isOwner } = useAuth();
@@ -31,10 +33,16 @@ export default function DashboardPage() {
 
           <QuickAdd />
 
-          {/* Ringkasan bulan ini: sisa uang + sisa budget per kategori */}
+          {/* Sisa uang bulan ini */}
           <MonthOverview />
 
+          {/* Pengingat: warna otomatis menurut sisa hari */}
+          <Reminders />
+
           <TodayOverview />
+
+          {/* Sisa budget per kategori: paling bawah */}
+          <BudgetOverview />
         </>
       )}
     </div>
