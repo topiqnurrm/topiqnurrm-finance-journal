@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useAuth } from "@/lib/hooks/useAuth";
 import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
 import LogoutButton from "@/components/auth/LogoutButton";
@@ -24,7 +25,15 @@ export default function DashboardPage() {
       </div>
 
       {!user ? (
-        <GoogleLoginButton />
+        <div className="space-y-4">
+          <GoogleLoginButton />
+          <Link
+            href="/orang-have"
+            className="block rounded-lg bg-indigo-600 py-3 text-center text-sm font-medium text-white"
+          >
+            Lihat Tabungan Bersama Orang Have (tanpa login)
+          </Link>
+        </div>
       ) : (
         <>
           <p className="text-sm text-neutral-500">

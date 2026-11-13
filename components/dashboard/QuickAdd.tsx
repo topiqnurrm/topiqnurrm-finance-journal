@@ -13,6 +13,12 @@ export default function QuickAdd() {
         Review Detail
       </Link>
       <Link
+        href="/orang-have"
+        className="col-span-2 rounded-lg bg-indigo-600 py-3 text-center text-sm font-medium text-white"
+      >
+        Tabungan Bersama Orang Have
+      </Link>
+      <Link
         href="/finance"
         className="rounded-lg bg-blue-600 py-3 text-center text-sm font-medium text-white"
       >
