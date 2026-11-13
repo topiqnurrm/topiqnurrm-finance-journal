@@ -14,6 +14,7 @@ import {
 import { JournalCategory, JournalEntry } from "@/lib/types/journal";
 import CategoryPicker from "@/components/journal/CategoryPicker";
 import { addItem, updateItem } from "@/lib/firebase/firestore";
+import { ARCHIVE_END, LIVE_START } from "@/lib/archive";
 import { JournalReviewItem, ReviewItem, TransactionReviewItem } from "./types";
 
 type CategoryWithId = JournalCategory & { id: string };
@@ -178,9 +179,13 @@ function TransactionEdit({ item, onDone }: { item: TransactionReviewItem; onDone
       <input
         type="date"
         value={date}
+        min={LIVE_START}
         onChange={(e) => setDate(e.target.value)}
         className="w-full min-w-0 rounded-md bg-neutral-800 p-2 text-sm"
       />
+      <p className="text-[11px] text-neutral-600">
+        Data sampai {ARCHIVE_END} sudah diarsipkan; tanggal minimal {LIVE_START}.
+      </p>
 
       <div className="flex gap-2">
         <button
@@ -267,9 +272,13 @@ function JournalEdit({
       <input
         type="date"
         value={date}
+        min={LIVE_START}
         onChange={(e) => setDate(e.target.value)}
         className="w-full min-w-0 rounded-md bg-neutral-800 p-2 text-sm"
       />
+      <p className="text-[11px] text-neutral-600">
+        Data sampai {ARCHIVE_END} sudah diarsipkan; tanggal minimal {LIVE_START}.
+      </p>
 
       <div className="flex gap-2">
         <button

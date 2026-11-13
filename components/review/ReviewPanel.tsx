@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { isArchivedId } from "@/lib/archive";
 import { useReviewData } from "@/lib/hooks/useReviewData";
 import { deleteItem } from "@/lib/firebase/firestore";
 import { formatRupiah } from "@/lib/utils/currency";
@@ -27,14 +28,19 @@ function sortNewest(a: ReviewItem, b: ReviewItem) {
   return b.createdAt - a.createdAt;
 }
 
-export default function ReviewPanel() {
+interface Props {
+  // Edit & hapus hanya untuk owner; pengunjung hanya melihat
+  isOwner: boolean;
+}
+
+export default function ReviewPanel({ isOwner }: Props) {
   const [search, setSearch] = useState("");
   const [kind, setKind] = useState<KindFilter>("all");
   const [category, setCategory] = useState("all");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [page, setPage] = useState(0);
-  const [showChecked, setShowChecked] = useState(false); // tampilkan juga yang hijau
+  const [showChecked, setShowChecked] = useState(true); // tampilkan juga yang hijau (default: dicentang)
   const [editingKey, setEditingKey] = useState<string | null>(null);
 
   const { auditDate, transactions, journals, categories, loading, includeOld, rangeReachesBefore } =
@@ -140,6 +146,7 @@ export default function ReviewPanel() {
   }
 
   function handleEdit(it: ReviewItem) {
+    if (!isOwner) return;
     const label = it.kind === "transaction" ? "transaksi" : "jurnal";
     if (window.confirm(`Edit ${label} ini? Form akan terisi otomatis.`)) {
       setEditingKey(it.key);
@@ -147,6 +154,7 @@ export default function ReviewPanel() {
   }
 
   function handleDelete(it: ReviewItem) {
+    if (!isOwner || isArchivedId(it.id)) return; // data arsip tidak bisa dihapus
     const label = it.kind === "transaction" ? "transaksi" : "jurnal";
     if (!window.confirm(`Yakin mau hapus ${label} ini? Data tidak bisa dikembalikan.`)) return;
     deleteItem(it.kind === "transaction" ? "finances" : "journals", it.id).catch((err) => {
@@ -198,18 +206,26 @@ export default function ReviewPanel() {
             >
               {amount.text}
             </span>
-            <button
-              onClick={() => handleEdit(it)}
-              className="text-xs text-neutral-500 hover:text-blue-400"
-            >
-              Edit
-            </button>
-            <button
-              onClick={() => handleDelete(it)}
-              className="text-xs text-neutral-500 hover:text-red-500"
-            >
-              Hapus
-            </button>
+            {isArchivedId(it.id) ? (
+              <span className="rounded bg-neutral-800 px-1.5 py-0.5 text-[10px] text-neutral-500">
+                Arsip
+              </span>
+            ) : isOwner ? (
+              <>
+                <button
+                  onClick={() => handleEdit(it)}
+                  className="text-xs text-neutral-500 hover:text-blue-400"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(it)}
+                  className="text-xs text-neutral-500 hover:text-red-500"
+                >
+                  Hapus
+                </button>
+              </>
+            ) : null}
           </div>
         </div>
       );
@@ -231,18 +247,26 @@ export default function ReviewPanel() {
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <span className="text-xs text-neutral-500">{it.date}</span>
-            <button
-              onClick={() => handleEdit(it)}
-              className="text-xs text-neutral-500 hover:text-blue-400"
-            >
-              Edit
-            </button>
-            <button
-              onClick={() => handleDelete(it)}
-              className="text-xs text-neutral-500 hover:text-red-500"
-            >
-              Hapus
-            </button>
+            {isArchivedId(it.id) ? (
+              <span className="rounded bg-neutral-800 px-1.5 py-0.5 text-[10px] text-neutral-500">
+                Arsip
+              </span>
+            ) : isOwner ? (
+              <>
+                <button
+                  onClick={() => handleEdit(it)}
+                  className="text-xs text-neutral-500 hover:text-blue-400"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(it)}
+                  className="text-xs text-neutral-500 hover:text-red-500"
+                >
+                  Hapus
+                </button>
+              </>
+            ) : null}
           </div>
         </div>
         <p className="whitespace-pre-wrap break-words text-sm text-neutral-200">{it.content}</p>

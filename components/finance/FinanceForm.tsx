@@ -14,6 +14,7 @@ import {
   getEffectiveType,
 } from "@/lib/types/finance";
 import { getLocalDateStr } from "@/lib/utils/date";
+import { ARCHIVE_END, LIVE_START } from "@/lib/archive";
 
 type EditableTransaction = Transaction & { id: string };
 
@@ -214,9 +215,13 @@ export default function FinanceForm({ editingTransaction, onCancelEdit, onSavedE
       <input
         type="date"
         value={date}
+        min={LIVE_START}
         onChange={(e) => setDate(e.target.value)}
         className="w-full rounded-md bg-neutral-800 p-2 text-sm"
       />
+      <p className="text-[11px] text-neutral-600">
+        Data sampai {ARCHIVE_END} sudah diarsipkan; tanggal minimal {LIVE_START}.
+      </p>
 
       <div className="flex gap-2">
         <button

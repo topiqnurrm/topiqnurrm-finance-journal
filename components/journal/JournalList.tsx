@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { isArchivedId } from "@/lib/archive";
 import { useJournal } from "@/lib/hooks/useJournal";
 import { JournalEntry } from "@/lib/types/journal";
 import { SortMode } from "@/components/ui/SortModeToggle";
@@ -50,6 +51,7 @@ export default function JournalList({ isOwner, selectedDate, sortMode, onEdit, e
 
   function renderRow(entry: EditableEntry) {
     const isBeingEdited = editingId === entry.id;
+    const archived = isArchivedId(entry.id);
     return (
       <div
         key={entry.id}
@@ -63,7 +65,12 @@ export default function JournalList({ isOwner, selectedDate, sortMode, onEdit, e
           </span>
           <div className="flex items-center gap-2">
             <span className="text-xs text-neutral-500">{entry.date}</span>
-            {isOwner && onEdit && (
+            {archived && (
+              <span className="rounded bg-neutral-800 px-1.5 py-0.5 text-[10px] text-neutral-500">
+                Arsip
+              </span>
+            )}
+            {isOwner && onEdit && !archived && (
               <button
                 onClick={() => handleEdit(entry)}
                 className="text-xs text-neutral-500 hover:text-blue-400"
@@ -71,7 +78,7 @@ export default function JournalList({ isOwner, selectedDate, sortMode, onEdit, e
                 Edit
               </button>
             )}
-            {isOwner && (
+            {isOwner && !archived && (
               <button
                 onClick={() => entry.id && handleDelete(entry.id)}
                 className="text-xs text-neutral-500 hover:text-red-500"

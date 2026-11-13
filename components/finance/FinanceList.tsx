@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { isArchivedId } from "@/lib/archive";
 import { useFinance } from "@/lib/hooks/useFinance";
 import {
   EXPENSE_CATEGORIES,
@@ -83,6 +84,7 @@ export default function FinanceList({ isOwner, selectedDate, sortMode, onEdit, e
   function renderRow(t: EditableTransaction) {
     const amount = getAmountDisplay(t);
     const isBeingEdited = editingId === t.id;
+    const archived = isArchivedId(t.id);
     return (
       <div
         key={t.id}
@@ -102,7 +104,12 @@ export default function FinanceList({ isOwner, selectedDate, sortMode, onEdit, e
           >
             {amount.text}
           </span>
-          {isOwner && onEdit && (
+          {archived && (
+            <span className="rounded bg-neutral-800 px-1.5 py-0.5 text-[10px] text-neutral-500">
+              Arsip
+            </span>
+          )}
+          {isOwner && onEdit && !archived && (
             <button
               onClick={() => handleEdit(t)}
               className="text-xs text-neutral-500 hover:text-blue-400"
@@ -110,7 +117,7 @@ export default function FinanceList({ isOwner, selectedDate, sortMode, onEdit, e
               Edit
             </button>
           )}
-          {isOwner && (
+          {isOwner && !archived && (
             <button
               onClick={() => t.id && handleDelete(t.id)}
               className="text-xs text-neutral-500 hover:text-red-500"

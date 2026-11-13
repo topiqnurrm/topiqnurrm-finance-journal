@@ -12,13 +12,16 @@ import { db } from "@/lib/firebase/config";
 import { subscribeToCollection } from "@/lib/firebase/firestore";
 import { Transaction } from "@/lib/types/finance";
 import { JournalEntry, JournalCategory } from "@/lib/types/journal";
+import {
+  DateWindow,
+  LoadedArchive,
+  attachJournalCategoryIds,
+  clampToLive,
+  inWindow,
+  loadArchive,
+} from "@/lib/archive";
 
-// Rentang tanggal untuk query Firestore (field "date" berformat YYYY-MM-DD)
-interface DateWindow {
-  gte?: string;
-  lt?: string;
-  lte?: string;
-}
+// Bulan sebelum LIVE_FROM (lib/archive/config.ts) diambil dari file arsip (gratis, tanpa baca Firebase).
 
 // Subscribe ke 1 koleksi dengan batas tanggal. win = null berarti tidak membaca apa pun.
 function useWindowedCollection<T>(name: string, win: DateWindow | null) {
@@ -116,7 +119,33 @@ function buildWindows(
 
 export function useReviewData(opts: { showChecked: boolean; from: string; to: string }) {
   const { showChecked, from, to } = opts;
-  const { auditDate, loaded } = useAuditDate();
+  const { auditDate: liveAuditDate, loaded: auditLoaded } = useAuditDate();
+
+  // Arsip dimuat dulu karena tanggal audit bisa ada di dalamnya
+  const [archive, setArchive] = useState<LoadedArchive | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    loadArchive()
+      .then((a) => {
+        if (!cancelled) setArchive(a);
+      })
+      .catch((err) => {
+        console.error(err);
+        if (!cancelled) setArchive({ transactions: [], journals: [], auditDate: null });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const loaded = auditLoaded && archive !== null;
+
+  // Tanggal audit = yang terbaru antara Firebase dan arsip
+  const auditDate = useMemo(() => {
+    const arch = archive?.auditDate ?? null;
+    if (!liveAuditDate) return arch;
+    if (!arch) return liveAuditDate;
+    return liveAuditDate > arch ? liveAuditDate : arch;
+  }, [liveAuditDate, archive]);
 
   // Rentang tanggal yang menjangkau sebelum audit otomatis ikut memuat data hijau
   const rangeActive = !!(from || to);
@@ -126,11 +155,28 @@ export function useReviewData(opts: { showChecked: boolean; from: string; to: st
 
   const windows = buildWindows(auditDate, includeOld, from, to);
 
-  // Jangan baca apa pun sebelum tanggal audit diketahui
-  const txRecent = useWindowedCollection<Transaction>("finances", loaded ? windows.recent : null);
-  const txOld = useWindowedCollection<Transaction>("finances", loaded ? windows.old : null);
-  const jrRecent = useWindowedCollection<JournalEntry>("journals", loaded ? windows.recent : null);
-  const jrOld = useWindowedCollection<JournalEntry>("journals", loaded ? windows.old : null);
+  // Jangan baca apa pun sebelum tanggal audit diketahui.
+  // Query Firebase dipotong ke tanggal >= LIVE_START; bagian lama diambil dari arsip.
+  const liveRecent = loaded ? clampToLive(windows.recent) : null;
+  const liveOld = loaded ? clampToLive(windows.old) : null;
+  const txRecent = useWindowedCollection<Transaction>("finances", liveRecent);
+  const txOld = useWindowedCollection<Transaction>("finances", liveOld);
+  const jrRecent = useWindowedCollection<JournalEntry>("journals", liveRecent);
+  const jrOld = useWindowedCollection<JournalEntry>("journals", liveOld);
+
+  // Arsip (kode): disaring dengan rentang yang sama
+  const windowsKey = loaded ? JSON.stringify(windows) : "";
+  const archivedTx = useMemo(
+    () =>
+      loaded && archive
+        ? archive.transactions.filter(
+            (t) => inWindow(t.date, windows.recent) || inWindow(t.date, windows.old)
+          )
+        : [],
+    // windows terwakili oleh windowsKey
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [loaded, archive, windowsKey]
+  );
 
   const [categories, setCategories] = useState<(JournalCategory & { id: string })[]>([]);
   useEffect(() => {
@@ -142,17 +188,36 @@ export function useReviewData(opts: { showChecked: boolean; from: string; to: st
     return () => unsub();
   }, []);
 
+  const archivedJournals = useMemo(
+    () =>
+      loaded && archive
+        ? attachJournalCategoryIds(
+            archive.journals.filter(
+              (e) => inWindow(e.date, windows.recent) || inWindow(e.date, windows.old)
+            ),
+            categories
+          )
+        : [],
+    // windows terwakili oleh windowsKey
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [loaded, archive, categories, windowsKey]
+  );
+
   const transactions = useMemo(
-    () => [...txRecent.items, ...txOld.items],
-    [txRecent.items, txOld.items]
+    () => [...txRecent.items, ...txOld.items, ...archivedTx],
+    [txRecent.items, txOld.items, archivedTx]
   );
   const journals = useMemo(
-    () => [...jrRecent.items, ...jrOld.items],
-    [jrRecent.items, jrOld.items]
+    () => [...jrRecent.items, ...jrOld.items, ...archivedJournals],
+    [jrRecent.items, jrOld.items, archivedJournals]
   );
 
   const loading =
-    !loaded || txRecent.loading || txOld.loading || jrRecent.loading || jrOld.loading;
+    !loaded ||
+    txRecent.loading ||
+    txOld.loading ||
+    jrRecent.loading ||
+    jrOld.loading;
 
   return { auditDate, transactions, journals, categories, loading, includeOld, rangeReachesBefore };
 }
