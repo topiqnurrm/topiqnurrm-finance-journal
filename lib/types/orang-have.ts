@@ -15,7 +15,7 @@ export interface OhPayment {
   savings: number; // tabungan pokok (Rp)
   kas: number; // iuran kas (Rp)
   paidDate: string; // tanggal transfer, YYYY-MM-DD
-  proof: string; // nama file di public/bukti, "" kalau tidak ada
+  proof: string; // nama file bukti setoran (folder nabung), "" kalau tidak ada
   note: string;
   createdAt: number;
 }
@@ -38,6 +38,7 @@ export interface OhLoan {
   dueDate: string; // "" kalau tidak ada
   repaidDate: string | null; // null = belum kembali
   note: string;
-  proof: string;
+  proof: string; // bukti pinjaman
+  repaidProof?: string; // bukti pelunasan (folder lunas); kosong kalau belum ada
   createdAt: number;
 }

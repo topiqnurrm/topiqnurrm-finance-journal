@@ -38,6 +38,9 @@ export default function OhSummary({ members, payments, expenses, loans }: Props)
         </div>
       </div>
 
+      {/* Chart uang aktual */}
+      <ActualChart savings={pool.savingsTotal} kas={kas.balance} outstanding={pool.outstanding} actual={pool.available} />
+
       {/* Progress per anggota */}
       <div className="min-w-0 space-y-3 rounded-xl border border-neutral-800 bg-neutral-900 p-4">
         <h2 className="text-sm font-semibold text-white">Progress per anggota</h2>
@@ -96,6 +99,71 @@ export default function OhSummary({ members, payments, expenses, loans }: Props)
         <Row k="Rekening" v={OH_ACCOUNT_INFO} />
         <Row k="Penggunaan kas" v="Biaya admin rekening, transfer, dan operasional (wajib ada bukti)" />
         <Row k="Pembagian" v={`${OH_PAYOUT_LABEL}; sisa kas dibagi rata ke semua anggota`} />
+      </div>
+    </div>
+  );
+}
+
+// Uang aktual = tabungan + saldo kas - pinjaman yang belum kembali
+function ActualChart({
+  savings,
+  kas,
+  outstanding,
+  actual,
+}: {
+  savings: number;
+  kas: number;
+  outstanding: number;
+  actual: number;
+}) {
+  const total = savings + kas;
+  const max = Math.max(total, 1);
+  const pct = (n: number) => `${Math.max(0, Math.min(100, (n / max) * 100))}%`;
+  const rows = [
+    { label: "Tabungan pokok", value: savings, sign: "", color: "bg-blue-500", text: "text-blue-400" },
+    { label: "Saldo kas", value: kas, sign: "+", color: "bg-indigo-500", text: "text-indigo-400" },
+    { label: "Sedang dipinjam", value: outstanding, sign: "−", color: "bg-amber-500", text: "text-amber-400" },
+    { label: "Uang aktual (ada di tangan)", value: actual, sign: "=", color: "bg-green-500", text: "text-green-500" },
+  ];
+  const borrowedPct = total > 0 ? Math.min(100, (outstanding / total) * 100) : 0;
+
+  return (
+    <div className="min-w-0 space-y-3 rounded-xl border border-neutral-800 bg-neutral-900 p-4">
+      <div>
+        <h2 className="text-sm font-semibold text-white">Uang aktual saat ini</h2>
+        <p className="text-xs text-neutral-600">Tabungan + saldo kas, dikurangi pinjaman yang belum dikembalikan.</p>
+      </div>
+
+      <p className={`break-words text-2xl font-semibold ${actual < 0 ? "text-red-500" : "text-green-500"}`}>
+        {formatRupiah(actual)}
+      </p>
+
+      {/* Bar gabungan: bagian hijau = ada di tangan, kuning = sedang dipinjam */}
+      <div>
+        <div className="flex h-3 overflow-hidden rounded-full bg-neutral-800">
+          <div className="h-full bg-green-500" style={{ width: `${Math.max(0, 100 - borrowedPct)}%` }} />
+          <div className="h-full bg-amber-500" style={{ width: `${borrowedPct}%` }} />
+        </div>
+        <div className="mt-1 flex justify-between text-xs text-neutral-500">
+          <span>Di tangan {total > 0 ? Math.round(100 - borrowedPct) : 0}%</span>
+          <span>Dipinjam {Math.round(borrowedPct)}%</span>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        {rows.map((r) => (
+          <div key={r.label} className="min-w-0 space-y-1">
+            <div className="flex items-baseline justify-between gap-2">
+              <p className="min-w-0 break-words text-xs text-neutral-400">{r.label}</p>
+              <p className={`shrink-0 text-xs font-medium ${r.text}`}>
+                {r.sign} {formatRupiah(r.value)}
+              </p>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-neutral-800">
+              <div className={`h-full rounded-full ${r.color}`} style={{ width: pct(r.value) }} />
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

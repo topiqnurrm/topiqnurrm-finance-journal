@@ -7,6 +7,7 @@ import { getLocalDateStr } from "@/lib/utils/date";
 import { OH_PAYOUT_LABEL } from "@/lib/orang-have/config";
 import { isValidProofName, kasSummary } from "@/lib/orang-have/calc";
 import OhProofLink from "./OhProofLink";
+import { ohProofDir } from "@/lib/orang-have/config";
 
 type Expense = OhKasExpense & { id: string };
 
@@ -142,7 +143,7 @@ export default function OhKas({ isOwner, members, payments, expenses, loans, add
             />
             <input
               type="text"
-              placeholder="Nama file bukti di public/bukti (wajib untuk transparansi)"
+              placeholder={`Nama file bukti (taruh di ${ohProofDir("kas")}) - wajib`}
               value={proof}
               onChange={(e) => setProof(e.target.value)}
               className="w-full min-w-0 rounded-md bg-neutral-800 p-2 text-sm"
@@ -171,7 +172,7 @@ export default function OhKas({ isOwner, members, payments, expenses, loans, add
                 <p className="break-words text-sm text-white">{e.note}</p>
                 <p className="text-xs text-neutral-500">{e.date}</p>
                 <div className="flex items-center gap-3">
-                  <OhProofLink proof={e.proof} />
+                  <OhProofLink proof={e.proof} kind="kas" />
                   {!e.proof && <span className="text-xs text-amber-500">Belum ada bukti</span>}
                   {isOwner && (
                     <>

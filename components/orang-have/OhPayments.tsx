@@ -15,6 +15,7 @@ import {
   periodMonths,
 } from "@/lib/orang-have/calc";
 import OhProofLink from "./OhProofLink";
+import { ohProofDir } from "@/lib/orang-have/config";
 
 type Member = OhMember & { id: string };
 type Payment = OhPayment & { id: string };
@@ -190,7 +191,7 @@ export default function OhPayments({ isOwner, members, payments, addPayment, edi
                         {p.note && ` · ${p.note}`}
                       </p>
                       <div className="flex items-center gap-3">
-                        <OhProofLink proof={p.proof} />
+                        <OhProofLink proof={p.proof} kind="nabung" />
                         {isOwner && (
                           <>
                             <button onClick={() => startEdit(p)} className="text-xs text-neutral-500 hover:text-blue-400">
@@ -246,7 +247,7 @@ export default function OhPayments({ isOwner, members, payments, addPayment, edi
                     />
                     <input
                       type="text"
-                      placeholder="Nama file bukti di public/bukti (mis. nov-hani.jpg)"
+                      placeholder={`Nama file bukti (taruh di ${ohProofDir("nabung")}), mis. nov-hani.jpg`}
                       value={proof}
                       onChange={(e) => setProof(e.target.value)}
                       className="w-full min-w-0 rounded-md bg-neutral-800 p-2 text-sm"

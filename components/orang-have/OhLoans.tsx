@@ -6,6 +6,7 @@ import { formatRupiah } from "@/lib/utils/currency";
 import { getLocalDateStr } from "@/lib/utils/date";
 import { isValidProofName } from "@/lib/orang-have/calc";
 import OhProofLink from "./OhProofLink";
+import { ohProofDir } from "@/lib/orang-have/config";
 
 type Loan = OhLoan & { id: string };
 
@@ -29,6 +30,10 @@ export default function OhLoans({ isOwner, members, loans, addLoan, editLoan, re
   const [note, setNote] = useState("");
   const [proof, setProof] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  // form pelunasan (inline di kartu pinjaman)
+  const [repayId, setRepayId] = useState<string | null>(null);
+  const [repayDate, setRepayDate] = useState(getLocalDateStr());
+  const [repayProof, setRepayProof] = useState("");
 
   const outstanding = loans.filter((l) => !l.repaidDate);
   const repaid = loans.filter((l) => l.repaidDate);
@@ -93,12 +98,37 @@ export default function OhLoans({ isOwner, members, loans, addLoan, editLoan, re
     setSubmitting(false);
   }
 
-  function toggleRepaid(l: Loan) {
+  function startRepay(l: Loan) {
+    setRepayId(l.id);
+    setRepayDate(l.repaidDate || getLocalDateStr());
+    setRepayProof(l.repaidProof || "");
+  }
+
+  async function saveRepay(l: Loan) {
+    if (!repayDate) {
+      window.alert("Isi tanggal pelunasan.");
+      return;
+    }
+    if (!isValidProofName(repayProof.trim())) {
+      window.alert("Nama file bukti hanya boleh huruf, angka, titik, spasi, minus, dan underscore (tanpa folder).");
+      return;
+    }
     const msg = l.repaidDate
-      ? `Batalkan status lunas pinjaman ${l.borrower}? Biaya pinjaman akan keluar dari kas.`
+      ? `Simpan perubahan data pelunasan ${l.borrower}?`
       : `Tandai pinjaman ${l.borrower} sudah dikembalikan? Biaya pinjaman ${formatRupiah(l.fee)} akan masuk kas.`;
     if (!window.confirm(msg)) return;
-    editLoan(l.id, { repaidDate: l.repaidDate ? null : getLocalDateStr() }).catch((err) => {
+    try {
+      await editLoan(l.id, { repaidDate: repayDate, repaidProof: repayProof.trim() });
+      setRepayId(null);
+    } catch (err) {
+      console.error(err);
+      window.alert("Gagal menyimpan. Pastikan kamu login sebagai owner.");
+    }
+  }
+
+  function cancelRepaid(l: Loan) {
+    if (!window.confirm(`Batalkan status lunas pinjaman ${l.borrower}? Biaya pinjaman akan keluar dari kas.`)) return;
+    editLoan(l.id, { repaidDate: null, repaidProof: "" }).catch((err) => {
       console.error(err);
       window.alert("Gagal menyimpan.");
     });
@@ -136,12 +166,19 @@ export default function OhLoans({ isOwner, members, loans, addLoan, editLoan, re
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <OhProofLink proof={l.proof} />
+          <OhProofLink proof={l.proof} kind="pinjaman" label="Bukti pinjaman" />
+          {isRepaid && <OhProofLink proof={l.repaidProof} kind="lunas" label="Bukti lunas" />}
+          {isRepaid && !l.repaidProof && <span className="text-xs text-amber-500">Belum ada bukti lunas</span>}
           {isOwner && (
             <>
-              <button onClick={() => toggleRepaid(l)} className="text-xs text-neutral-500 hover:text-green-400">
-                {isRepaid ? "Batalkan lunas" : "Tandai lunas"}
+              <button onClick={() => startRepay(l)} className="text-xs text-neutral-500 hover:text-green-400">
+                {isRepaid ? "Ubah data lunas" : "Tandai lunas"}
               </button>
+              {isRepaid && (
+                <button onClick={() => cancelRepaid(l)} className="text-xs text-neutral-500 hover:text-amber-400">
+                  Batalkan lunas
+                </button>
+              )}
               <button onClick={() => startEdit(l)} className="text-xs text-neutral-500 hover:text-blue-400">
                 Edit
               </button>
@@ -151,6 +188,43 @@ export default function OhLoans({ isOwner, members, loans, addLoan, editLoan, re
             </>
           )}
         </div>
+        {isOwner && repayId === l.id && (
+          <div className="space-y-2 rounded-md border border-neutral-800 p-3">
+            <p className="text-xs text-neutral-400">{isRepaid ? "Ubah data pelunasan" : "Pelunasan pinjaman"}</p>
+            <label className="block text-xs text-neutral-500">
+              Tanggal dikembalikan
+              <input
+                type="date"
+                value={repayDate}
+                onChange={(e) => setRepayDate(e.target.value)}
+                className="mt-1 w-full min-w-0 rounded-md bg-neutral-800 p-2 text-sm"
+              />
+            </label>
+            <input
+              type="text"
+              placeholder={`Nama file bukti lunas (taruh di ${ohProofDir("lunas")})`}
+              value={repayProof}
+              onChange={(e) => setRepayProof(e.target.value)}
+              className="w-full min-w-0 rounded-md bg-neutral-800 p-2 text-sm"
+            />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => saveRepay(l)}
+                className="flex-1 rounded-md bg-green-600 py-2 text-sm font-medium text-white"
+              >
+                Simpan lunas
+              </button>
+              <button
+                type="button"
+                onClick={() => setRepayId(null)}
+                className="flex-1 rounded-md bg-neutral-700 py-2 text-sm font-medium text-white"
+              >
+                Batal
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -242,7 +316,7 @@ export default function OhLoans({ isOwner, members, loans, addLoan, editLoan, re
             />
             <input
               type="text"
-              placeholder="Nama file bukti di public/bukti (opsional)"
+              placeholder={`Nama file bukti pinjaman (taruh di ${ohProofDir("pinjaman")}) - opsional`}
               value={proof}
               onChange={(e) => setProof(e.target.value)}
               className="w-full min-w-0 rounded-md bg-neutral-800 p-2 text-sm"

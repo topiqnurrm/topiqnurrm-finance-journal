@@ -20,6 +20,21 @@ export const OH_KAS_PER_PERSON = 10000;
 // Rekening tujuan transfer, tampil di halaman. Ganti teks ini kalau sudah ada.
 export const OH_ACCOUNT_INFO = "Belum ditentukan";
 
-// Folder bukti transfer di dalam proyek: public/bukti/<nama-file>
-// Taruh gambarnya di folder itu, lalu tulis nama filenya (mis. nov-hani.jpg) di form.
-export const OH_PROOF_BASE = "/bukti/";
+// Folder bukti di dalam proyek. Struktur:
+//   public/tabungan-bersama/<OH_PROOF_VERSION>/nabung/    -> bukti setoran
+//   public/tabungan-bersama/<OH_PROOF_VERSION>/kas/       -> bukti pengeluaran kas
+//   public/tabungan-bersama/<OH_PROOF_VERSION>/pinjaman/  -> bukti pinjaman
+//   public/tabungan-bersama/<OH_PROOF_VERSION>/lunas/     -> bukti pelunasan pinjaman
+// Mau ganti versi (mis. v2)? Cukup ubah OH_PROOF_VERSION dan buat folder barunya.
+export const OH_PROOF_VERSION = "v1";
+export const OH_PROOF_ROOT = `/tabungan-bersama/${OH_PROOF_VERSION}/`;
+export type OhProofKind = "nabung" | "kas" | "pinjaman" | "lunas";
+export const OH_PROOF_FOLDERS: Record<OhProofKind, string> = {
+  nabung: "nabung",
+  kas: "kas",
+  pinjaman: "pinjaman",
+  lunas: "lunas",
+};
+// Teks bantu di form: public/tabungan-bersama/v1/<folder>
+export const ohProofDir = (kind: OhProofKind) =>
+  `public/tabungan-bersama/${OH_PROOF_VERSION}/${OH_PROOF_FOLDERS[kind]}`;
