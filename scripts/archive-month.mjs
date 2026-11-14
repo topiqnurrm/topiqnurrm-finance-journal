@@ -51,7 +51,7 @@ const jrRows = readRows("Jurnal");
 
 const CAT = {
   Kehidupan: "kehidupan", Mendadak: "mendadak", Tabungan: "tabungan", "Foya-foya": "foya_foya",
-  Grooming: "grooming", "Dana Darurat": "dana_darurat", Audit: "audit", "Hutang / Piutang": "hutang",
+  Grooming: "grooming", "Dana Darurat": "dana_darurat", "Tabungan Orang Have": "tabungan_oh", Audit: "audit", "Hutang / Piutang": "hutang",
 };
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 

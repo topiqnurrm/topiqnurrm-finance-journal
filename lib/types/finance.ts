@@ -11,6 +11,7 @@ export type ExpenseCategory =
   | "foya_foya"
   | "grooming"
   | "dana_darurat"
+  | "tabungan_oh" // Tabungan Bersama Orang Have (seperti dana darurat)
   | "audit"
   | "hutang" // hutang / piutang -> tidak dihitung sebagai pemasukan maupun pengeluaran
   | "sisa_dibawa"; // DATA LAMA: dulu sisa bulan dicatat sebagai pengeluaran, kini otomatis dianggap "carryover"
@@ -43,6 +44,7 @@ export const EXPENSE_CATEGORIES: { value: ExpenseCategory; label: string }[] = [
   { value: "foya_foya", label: "Foya-foya" },
   { value: "grooming", label: "Grooming" },
   { value: "dana_darurat", label: "Dana Darurat" },
+  { value: "tabungan_oh", label: "Tabungan Orang Have" },
   { value: "audit", label: "Audit" },
   { value: "hutang", label: "Hutang / Piutang" },
 ];
@@ -96,5 +98,6 @@ export interface Budget {
   foya_foya: number;
   grooming: number;
   dana_darurat: number;
+  tabungan_oh?: number; // budget bulan lama tidak punya field ini
   audit: number;
 }

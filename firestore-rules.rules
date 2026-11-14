@@ -8,77 +8,95 @@ service cloud.firestore {
         && request.auth.token.email_verified == true;
     }
 
+    // Owner: satu-satunya yang boleh mengubah data, dan selalu punya akses penuh
     function isOwner() {
       return isSignedIn()
         && request.auth.token.email == "topique01@gmail.com";
     }
 
-    // ===== DAFTAR EMAIL YANG BOLEH MELIHAT DATA PRIBADI =====
-    // Tambah / hapus email di sini (huruf kecil semua), lalu klik Publish di Firebase Console.
-    // Yang boleh mengubah data tetap hanya owner (isOwner).
-    function isViewer() {
-      return isSignedIn()
-        && request.auth.token.email in [
-          "topique01@gmail.com"
-          // , "teman@gmail.com"
-        ];
+    // Daftar akun disimpan di database: dokumen  access/config
+    //   personalViewers: [ "email1@gmail.com", ... ]   -> boleh melihat keuangan & jurnal pribadi
+    //   ohViewers:       [ "email2@gmail.com", ... ]   -> boleh melihat Tabungan Bersama Orang Have
+    // Diatur lewat halaman /akses di aplikasi (khusus owner).
+    function accessCfg() {
+      return get(/databases/$(database)/documents/access/config).data;
     }
 
-    // ===== DATA PRIBADI: baca = daftar email di atas, tulis = owner =====
+    function isPersonalViewer() {
+      return isOwner()
+        || (isSignedIn()
+            && request.auth.token.email in accessCfg().get('personalViewers', []));
+    }
+
+    function isOhViewer() {
+      return isOwner()
+        || (isSignedIn()
+            && request.auth.token.email in accessCfg().get('ohViewers', []));
+    }
+
+    // ===== Daftar akses: hanya owner =====
+    match /access/config {
+      allow read, write: if isOwner();
+    }
+
+    // Dokumen "pancingan" (tidak perlu dibuat): dipakai aplikasi untuk mengecek hak akses akun
+    match /access/personalProbe {
+      allow read: if isPersonalViewer();
+    }
+
+    match /access/ohProbe {
+      allow read: if isOhViewer();
+    }
+
+    // ===== DATA PRIBADI: baca = personalViewers, tulis = owner =====
     match /finances/{docId} {
-      allow read: if isViewer();
+      allow read: if isPersonalViewer();
       allow write: if isOwner();
     }
 
     match /journalCategories/{docId} {
-      allow read: if isViewer();
+      allow read: if isPersonalViewer();
       allow write: if isOwner();
     }
 
     match /journals/{docId} {
-      allow read: if isViewer();
+      allow read: if isPersonalViewer();
       allow write: if isOwner();
     }
 
     match /budgets/{docId} {
-      allow read: if isViewer();
+      allow read: if isPersonalViewer();
       allow write: if isOwner();
     }
 
     match /assets/{docId} {
-      allow read: if isViewer();
+      allow read: if isPersonalViewer();
       allow write: if isOwner();
     }
 
     match /reminders/{docId} {
-      allow read: if isViewer();
+      allow read: if isPersonalViewer();
       allow write: if isOwner();
     }
 
-    // Dipakai aplikasi untuk mengecek apakah akun boleh melihat data pribadi (dokumen tidak perlu dibuat)
-    match /access/{docId} {
-      allow read: if isViewer();
-      allow write: if false;
-    }
-
-    // ===== TABUNGAN BERSAMA ORANG HAVE: baca = siapa pun (tanpa login), tulis = owner =====
+    // ===== TABUNGAN BERSAMA ORANG HAVE: baca = ohViewers (wajib login), tulis = owner =====
     match /ohMembers/{docId} {
-      allow read: if true;
+      allow read: if isOhViewer();
       allow write: if isOwner();
     }
 
     match /ohPayments/{docId} {
-      allow read: if true;
+      allow read: if isOhViewer();
       allow write: if isOwner();
     }
 
     match /ohKasExpenses/{docId} {
-      allow read: if true;
+      allow read: if isOhViewer();
       allow write: if isOwner();
     }
 
     match /ohLoans/{docId} {
-      allow read: if true;
+      allow read: if isOhViewer();
       allow write: if isOwner();
     }
   }

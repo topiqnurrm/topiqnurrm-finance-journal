@@ -9,6 +9,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   foya_foya: "Foya-foya",
   grooming: "Grooming",
   dana_darurat: "Dana Darurat",
+  tabungan_oh: "Tabungan Orang Have",
   audit: "Audit",
   sisa_dibawa: "Sisa Dibawa ke Bulan Depan",
   hutang: "Hutang / Piutang",

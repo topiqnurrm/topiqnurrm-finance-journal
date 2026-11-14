@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useOrangHave } from "@/lib/hooks/useOrangHave";
 import BackButton from "@/components/ui/BackButton";
+import LogoutButton from "@/components/auth/LogoutButton";
 import OhSummary from "@/components/orang-have/OhSummary";
 import OhPayments from "@/components/orang-have/OhPayments";
 import OhKas from "@/components/orang-have/OhKas";
@@ -22,18 +23,22 @@ const TABS: { id: Tab; label: string }[] = [
 
 // Halaman publik: siapa pun bisa melihat tanpa login. Tambah/ubah/hapus hanya untuk owner.
 export default function OrangHavePage() {
-  const { isOwner } = useAuth();
+  const { user, isOwner } = useAuth();
   const oh = useOrangHave();
   const [tab, setTab] = useState<Tab>("ringkasan");
 
   return (
     <div className="mx-auto max-w-2xl space-y-4 overflow-x-hidden p-4">
-      <div className="flex items-center gap-3">
-        <BackButton />
-        <h1 className="min-w-0 break-words text-xl font-semibold">Tabungan Bersama Orang Have</h1>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <BackButton />
+          <h1 className="min-w-0 break-words text-xl font-semibold">Tabungan Bersama Orang Have</h1>
+        </div>
+        <LogoutButton />
       </div>
 
-      <p className="text-xs text-neutral-500">
+      <p className="break-all text-xs text-neutral-500">
+        {user?.email ? `Login sebagai ${user.email} · ` : ""}
         {isOwner ? "Mode owner (bisa edit)" : "Mode lihat saja"}
       </p>
 

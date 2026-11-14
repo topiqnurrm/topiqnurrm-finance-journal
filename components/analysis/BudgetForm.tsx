@@ -15,6 +15,7 @@ const CATEGORIES = [
   { key: "foya_foya", label: "Foya-foya" },
   { key: "grooming", label: "Grooming" },
   { key: "dana_darurat", label: "Dana Darurat" },
+  { key: "tabungan_oh", label: "Tab. Orang Have" },
   { key: "audit", label: "Audit" },
 ] as const;
 
@@ -25,6 +26,7 @@ const EMPTY_VALUES = {
   foya_foya: 0,
   grooming: 0,
   dana_darurat: 0,
+  tabungan_oh: 0,
   audit: 0,
 };
 
@@ -36,7 +38,7 @@ export default function BudgetForm({ monthId, initialBudget, onSave }: Props) {
     if (initialBudget) {
       const { id, ...rest } = initialBudget;
       // Merge dengan default 0 supaya budget bulan lama (sebelum kategori baru
-      // ditambahkan) tidak punya field undefined untuk grooming/dana_darurat/audit
+      // ditambahkan) tidak punya field undefined untuk grooming/dana_darurat/tabungan_oh/audit
       setValues({ ...EMPTY_VALUES, ...rest });
     } else {
       setValues(EMPTY_VALUES);

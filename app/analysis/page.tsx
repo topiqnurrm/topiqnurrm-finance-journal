@@ -55,6 +55,7 @@ export default function AnalysisPage() {
       (budget.foya_foya ?? 0) +
       (budget.grooming ?? 0) +
       (budget.dana_darurat ?? 0) +
+      (budget.tabungan_oh ?? 0) +
       (budget.audit ?? 0)
     : 0;
   // Semua uang masuk bulan ini = pemasukan + sisa bulan lalu + diambil dari tabungan / dana darurat
@@ -67,7 +68,11 @@ export default function AnalysisPage() {
   // Total terkumpul kumulatif sampai akhir bulan yang dipilih:
   // semua transaksi dengan bulan <= monthId (format YYYY-MM bisa dibandingkan sebagai string)
   // dikurangi pengambilan (jenis "Ambil Tabungan")
-  const { tabungan: totalTabungan, danaDarurat: totalDanaDarurat } = calcSavingsBalance(
+  const {
+    tabungan: totalTabungan,
+    danaDarurat: totalDanaDarurat,
+    tabunganOh: totalTabunganOh,
+  } = calcSavingsBalance(
     transactions,
     monthId
   );
@@ -193,6 +198,13 @@ export default function AnalysisPage() {
             {formatRupiah(totalDanaDarurat)}
           </p>
           <p className="mt-1 text-xs text-neutral-600">Setoran − pengambilan sampai akhir {formatMonthLabel(monthId)}</p>
+        </div>
+        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 min-w-0 col-span-2">
+          <p className="text-sm text-neutral-400">Total Tabungan Orang Have</p>
+          <p className="text-lg font-semibold text-indigo-400 break-words">
+            {formatRupiah(totalTabunganOh)}
+          </p>
+          <p className="mt-1 text-xs text-neutral-600">Terkumpul sampai akhir {formatMonthLabel(monthId)}</p>
         </div>
       </div>
 

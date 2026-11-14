@@ -71,14 +71,16 @@ export function calcMonthTotals(transactions: TxLike[], monthId: string): MonthT
 export function calcSavingsBalance(transactions: TxLike[], upToMonthId: string) {
   let tabungan = 0;
   let danaDarurat = 0;
+  let tabunganOh = 0;
   for (const t of transactions) {
     if (t.date.slice(0, 7) > upToMonthId) continue;
     const sign = t.type === "expense" ? 1 : t.type === "withdrawal" ? -1 : 0;
     if (sign === 0) continue;
     if (t.category === "tabungan") tabungan += sign * t.amount;
     else if (t.category === "dana_darurat") danaDarurat += sign * t.amount;
+    else if (t.category === "tabungan_oh" && sign === 1) tabunganOh += t.amount;
   }
-  return { tabungan, danaDarurat };
+  return { tabungan, danaDarurat, tabunganOh };
 }
 
 // Saldo hutang/piutang yang belum lunas, kumulatif sampai akhir bulan yang dipilih.

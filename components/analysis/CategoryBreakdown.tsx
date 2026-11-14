@@ -8,6 +8,7 @@ const CATEGORIES = [
   "foya_foya",
   "grooming",
   "dana_darurat",
+  "tabungan_oh",
   "audit",
 ] as const;
 
@@ -18,6 +19,7 @@ const LABELS: Record<string, string> = {
   foya_foya: "Foya-foya",
   grooming: "Grooming",
   dana_darurat: "Dana Darurat",
+  tabungan_oh: "Tabungan Orang Have",
   audit: "Audit",
 };
 

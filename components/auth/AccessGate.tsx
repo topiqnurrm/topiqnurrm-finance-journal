@@ -1,83 +1,123 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { createContext, useContext, useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import { useAuth } from "@/lib/hooks/useAuth";
+import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
 import LogoutButton from "@/components/auth/LogoutButton";
-
-// Halaman yang terbuka untuk umum (tanpa login)
-const PUBLIC_PREFIXES = ["/orang-have"];
 
 type Access = "checking" | "allowed" | "denied";
 
-// Pembungkus untuk semua halaman. Data pribadi hanya bisa dibaca akun yang ada di daftar email di firestore.rules.
-// Pengecekan di sini hanya untuk tampilan yang ramah; yang benar-benar menjaga data adalah rules Firestore.
+interface AccessState {
+  personal: Access; // boleh melihat keuangan & jurnal pribadi
+  oh: Access; // boleh melihat Tabungan Bersama Orang Have
+}
+
+const AccessContext = createContext<AccessState>({ personal: "checking", oh: "checking" });
+
+// Dipakai komponen lain (mis. tombol di dashboard) untuk tahu hak akses akun yang sedang login
+export function useAccess() {
+  return useContext(AccessContext);
+}
+
+type Section = "oh" | "owner" | "personal";
+
+function getSection(pathname: string): Section {
+  if (pathname === "/orang-have" || pathname.startsWith("/orang-have/")) return "oh";
+  if (pathname === "/akses" || pathname.startsWith("/akses/")) return "owner";
+  return "personal";
+}
+
+function NotFound() {
+  return (
+    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 p-4 text-center">
+      <h1 className="text-2xl font-semibold">404</h1>
+      <p className="text-sm text-neutral-400">Halaman tidak ditemukan.</p>
+      <LogoutButton />
+    </div>
+  );
+}
+
+// Pembungkus semua halaman. Daftar akun diambil dari database (dokumen access/config) lewat rules Firestore.
+// Akun yang tidak terdaftar melihat halaman 404. Yang benar-benar menjaga data adalah rules; ini hanya tampilan.
 export default function AccessGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || "/";
-  const { user, loading } = useAuth();
-  const isPublic = PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"));
+  const router = useRouter();
+  const { user, loading, isOwner } = useAuth();
+  const section = getSection(pathname);
 
-  const [access, setAccess] = useState<Access>("checking");
+  const [state, setState] = useState<AccessState>({ personal: "checking", oh: "checking" });
 
   useEffect(() => {
-    if (isPublic || loading || !user) return;
+    if (loading || !user) {
+      setState({ personal: "checking", oh: "checking" });
+      return;
+    }
+    // Owner selalu punya akses penuh (rules juga begitu), jadi tidak perlu baca apa pun
+    if (isOwner) {
+      setState({ personal: "allowed", oh: "allowed" });
+      return;
+    }
+
     let cancelled = false;
-    setAccess("checking");
-    // Baca dokumen "access/probe" (tidak perlu ada). Rules mengizinkan baca hanya untuk email terdaftar,
-    // jadi hasil permission-denied = akun ini tidak diizinkan melihat data pribadi.
-    getDoc(doc(db, "access", "probe"))
-      .then(() => {
-        if (!cancelled) setAccess("allowed");
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        // Error lain (mis. offline) tidak mengunci akun; rules tetap menjaga datanya
-        setAccess(err?.code === "permission-denied" ? "denied" : "allowed");
-      });
+    setState({ personal: "checking", oh: "checking" });
+
+    // Baca dokumen "pancingan" (tidak perlu ada). permission-denied = akun tidak terdaftar di daftar itu.
+    const probe = (name: string, key: keyof AccessState) =>
+      getDoc(doc(db, "access", name))
+        .then(() => "allowed" as Access)
+        .catch((err) => (err?.code === "permission-denied" ? "denied" : "allowed") as Access)
+        .then((v) => {
+          if (!cancelled) setState((s) => ({ ...s, [key]: v }));
+        });
+
+    probe("personalProbe", "personal");
+    probe("ohProbe", "oh");
+
     return () => {
       cancelled = true;
     };
-  }, [isPublic, loading, user]);
+  }, [loading, user, isOwner]);
 
-  if (isPublic) return <>{children}</>;
+  // Akun yang hanya punya akses Orang Have, lalu membuka "/": arahkan ke Orang Have
+  useEffect(() => {
+    if (pathname === "/" && user && state.personal === "denied" && state.oh === "allowed") {
+      router.replace("/orang-have");
+    }
+  }, [pathname, user, state, router]);
+
+  const wrap = (node: React.ReactNode) => <AccessContext.Provider value={state}>{node}</AccessContext.Provider>;
 
   if (loading) return <div className="p-4 text-sm text-neutral-500">Memuat...</div>;
 
+  // Belum login: dashboard menampilkan tombol login sendiri; halaman lain meminta login
   if (!user) {
-    // Dashboard menampilkan tombol login sendiri
-    if (pathname === "/") return <>{children}</>;
+    if (pathname === "/") return wrap(children);
     return (
       <div className="mx-auto max-w-2xl space-y-4 p-4">
-        <p className="text-sm text-neutral-400">Silakan login dulu di halaman utama.</p>
-        <Link href="/" className="inline-block rounded-lg bg-blue-600 px-4 py-2 text-sm text-white">
-          Ke halaman utama
-        </Link>
+        <p className="text-sm text-neutral-400">Silakan login untuk melanjutkan.</p>
+        <GoogleLoginButton />
       </div>
     );
   }
 
-  if (access === "checking") return <div className="p-4 text-sm text-neutral-500">Memuat...</div>;
+  if (section === "owner") return isOwner ? wrap(children) : <NotFound />;
 
-  if (access === "denied") {
-    return (
-      <div className="mx-auto max-w-2xl space-y-4 p-4">
-        <h1 className="text-xl font-semibold">Akses dibatasi</h1>
-        <p className="text-sm text-neutral-400">
-          Akun {user.email} belum diizinkan melihat data keuangan dan jurnal pribadi.
-        </p>
-        <Link
-          href="/orang-have"
-          className="block rounded-lg bg-indigo-600 py-3 text-center text-sm font-medium text-white"
-        >
-          Lihat Tabungan Bersama Orang Have
-        </Link>
-        <LogoutButton />
-      </div>
-    );
+  const mine = section === "oh" ? state.oh : state.personal;
+  if (mine === "checking") return <div className="p-4 text-sm text-neutral-500">Memuat...</div>;
+
+  if (mine === "denied") {
+    // "/" untuk akun yang tidak punya akses pribadi: tunggu hasil cek Orang Have (mungkin dialihkan)
+    if (pathname === "/" && state.oh === "checking") {
+      return <div className="p-4 text-sm text-neutral-500">Memuat...</div>;
+    }
+    if (pathname === "/" && state.oh === "allowed") {
+      return <div className="p-4 text-sm text-neutral-500">Memuat...</div>;
+    }
+    return <NotFound />;
   }
 
-  return <>{children}</>;
+  return wrap(children);
 }
