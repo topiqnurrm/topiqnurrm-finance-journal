@@ -9,7 +9,44 @@ import CategoryBreakdown from "@/components/analysis/CategoryBreakdown";
 import { formatRupiah } from "@/lib/utils/currency";
 import BackButton from "@/components/ui/BackButton";
 import AssetNotes from "@/components/analysis/AssetNotes";
+import ActualMoneyChart from "@/components/analysis/ActualMoneyChart";
 import { calcDebtBalance, calcMonthTotals, calcSavingsBalance } from "@/lib/utils/finance";
+
+// Pembungkus satu kategori: judul + isi
+function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <section className="min-w-0 space-y-3 rounded-xl border border-neutral-800 bg-neutral-900 p-4">
+      <div className="flex items-baseline justify-between gap-2">
+        <h2 className="text-sm font-semibold text-white">{title}</h2>
+        {hint && <p className="min-w-0 break-words text-right text-xs capitalize text-neutral-500">{hint}</p>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+// Satu angka di dalam kategori
+function Stat({
+  label,
+  value,
+  tone,
+  hint,
+  className = "",
+}: {
+  label: string;
+  value: string;
+  tone: string;
+  hint?: string;
+  className?: string;
+}) {
+  return (
+    <div className={`min-w-0 rounded-lg border border-neutral-800 p-3 ${className}`}>
+      <p className="text-xs text-neutral-400">{label}</p>
+      <p className={`break-words text-lg font-semibold ${tone}`}>{value}</p>
+      {hint && <p className="mt-1 break-words text-xs text-neutral-600">{hint}</p>}
+    </div>
+  );
+}
 
 function getCurrentMonthId() {
   const now = new Date();
@@ -118,110 +155,77 @@ export default function AnalysisPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 min-w-0">
-          <p className="text-sm text-neutral-400">Pemasukan Bulan Ini</p>
-          <p className="text-lg font-semibold text-green-400 break-words">
-            {formatRupiah(totalIncome)}
-          </p>
+      {/* 1. Ringkasan bulan ini */}
+      <Section title="Bulan Ini" hint={formatMonthLabel(monthId)}>
+        <div className="grid grid-cols-2 gap-3">
+          <Stat label="Pemasukan" value={formatRupiah(totalIncome)} tone="text-green-400" />
+          <Stat label="Pengeluaran" value={formatRupiah(totalExpense)} tone="text-red-400" />
+          <Stat
+            className="col-span-2"
+            label="Sisa Uang Bulan Ini"
+            value={formatRupiah(sisaUang)}
+            tone={sisaUang < 0 ? "text-red-400" : "text-green-400"}
+            hint={
+              carryIn !== 0 || carryOut !== 0 || withdrawal !== 0
+                ? "Pemasukan + sisa bulan lalu + ambil tabungan − pengeluaran − sisa dibawa"
+                : "Pemasukan − Pengeluaran"
+            }
+          />
+          <Stat
+            className="col-span-2"
+            label="Piutang"
+            value={`${piutang > 0 ? "+" : ""}${formatRupiah(piutang)}`}
+            tone={piutang > 0 ? "text-green-400" : piutang < 0 ? "text-red-400" : "text-neutral-300"}
+            hint="+ orang lain berhutang ke kamu, − kamu berhutang (tidak dihitung di sisa uang)"
+          />
         </div>
-        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 min-w-0">
-          <p className="text-sm text-neutral-400">Pengeluaran Bulan Ini</p>
-          <p className="text-lg font-semibold text-red-400 break-words">
-            {formatRupiah(totalExpense)}
-          </p>
-        </div>
-      </div>
+      </Section>
 
-      {(carryIn !== 0 || carryOut !== 0) && (
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 min-w-0">
-            <p className="text-sm text-neutral-400">Sisa Bulan Lalu</p>
-            <p className="text-lg font-semibold text-sky-400 break-words">{formatRupiah(carryIn)}</p>
-            <p className="mt-1 text-xs text-neutral-600">Dibawa dari bulan sebelumnya</p>
-          </div>
-          <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 min-w-0">
-            <p className="text-sm text-neutral-400">Dibawa ke Bulan Depan</p>
-            <p className="text-lg font-semibold text-sky-400 break-words">{formatRupiah(carryOut)}</p>
-            <p className="mt-1 text-xs text-neutral-600">Bukan pengeluaran</p>
-          </div>
+      {/* 2. Sisa antar bulan */}
+      <Section title="Sisa Antar Bulan">
+        <div className="grid grid-cols-2 gap-3">
+          <Stat label="Sisa Bulan Lalu" value={formatRupiah(carryIn)} tone="text-sky-400" hint="Dibawa dari bulan sebelumnya" />
+          <Stat label="Dibawa ke Bulan Depan" value={formatRupiah(carryOut)} tone="text-sky-400" hint="Bukan pengeluaran" />
         </div>
-      )}
+      </Section>
 
-      {withdrawal !== 0 && (
-        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 min-w-0">
-          <p className="text-sm text-neutral-400">Diambil dari Tabungan / Dana Darurat</p>
-          <p className="text-lg font-semibold text-amber-400 break-words">{formatRupiah(withdrawal)}</p>
-          <p className="mt-1 text-xs text-neutral-600">Menambah Sisa Uang, bukan pemasukan</p>
+      {/* 3. Tabungan & dana (kumulatif) */}
+      <Section title="Tabungan & Dana" hint={`Total sampai akhir ${formatMonthLabel(monthId)}`}>
+        <div className="grid grid-cols-2 gap-3">
+          <Stat label="Total Tabungan" value={formatRupiah(totalTabungan)} tone="text-blue-400" hint="Setoran − pengambilan" />
+          <Stat label="Total Dana Darurat" value={formatRupiah(totalDanaDarurat)} tone="text-blue-400" hint="Setoran − pengambilan" />
+          <Stat
+            className="col-span-2"
+            label="Total Tabungan Orang Have"
+            value={formatRupiah(totalTabunganOh)}
+            tone="text-indigo-400"
+            hint="Terkumpul (tidak bisa diambil lewat sini)"
+          />
         </div>
-      )}
+      </Section>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 min-w-0">
-          <p className="text-sm text-neutral-400">Sisa Uang</p>
-          <p className={`text-lg font-semibold break-words ${sisaUang < 0 ? "text-red-400" : "text-green-400"}`}>
-            {formatRupiah(sisaUang)}
-          </p>
-          <p className="mt-1 text-xs text-neutral-600">
-            {carryIn !== 0 || carryOut !== 0 || withdrawal !== 0
-              ? "Pemasukan + sisa bulan lalu + ambil tabungan − pengeluaran − sisa dibawa"
-              : "Pemasukan − Pengeluaran"}
-          </p>
+      {/* 4. Pengambilan & sisa terhadap budget */}
+      <Section title="Pengambilan & Sisa Budget">
+        <div className="grid grid-cols-1 gap-3">
+          <Stat
+            label="Diambil dari Tabungan / Dana Darurat"
+            value={formatRupiah(withdrawal)}
+            tone="text-amber-400"
+            hint="Menambah uang bulan ini, bukan pemasukan"
+          />
+          <Stat
+            label="Sisa (Semua Pemasukan − Total Budget)"
+            value={formatRupiah(sisaBudget)}
+            tone={sisaBudget < 0 ? "text-red-400" : "text-green-400"}
+            hint={`Pemasukan ${formatRupiah(totalIncome)} + sisa bulan lalu ${formatRupiah(carryIn)} + ambil tabungan/dana darurat ${formatRupiah(withdrawal)} = ${formatRupiah(totalDana)}; dikurangi total budget ${formatRupiah(totalBudgetAllocated)}`}
+          />
         </div>
-        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 min-w-0">
-          <p className="text-sm text-neutral-400">Piutang</p>
-          <p
-            className={`text-lg font-semibold break-words ${
-              piutang > 0 ? "text-green-400" : piutang < 0 ? "text-red-400" : "text-neutral-300"
-            }`}
-          >
-            {piutang > 0 ? "+" : ""}
-            {formatRupiah(piutang)}
-          </p>
-          <p className="mt-1 text-xs text-neutral-600">
-            + orang lain berhutang ke kamu, − kamu berhutang
-          </p>
-        </div>
-      </div>
+      </Section>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 min-w-0">
-          <p className="text-sm text-neutral-400">Total Tabungan</p>
-          <p className="text-lg font-semibold text-blue-400 break-words">
-            {formatRupiah(totalTabungan)}
-          </p>
-          <p className="mt-1 text-xs text-neutral-600">Setoran − pengambilan sampai akhir {formatMonthLabel(monthId)}</p>
-        </div>
-        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 min-w-0">
-          <p className="text-sm text-neutral-400">Total Dana Darurat</p>
-          <p className="text-lg font-semibold text-blue-400 break-words">
-            {formatRupiah(totalDanaDarurat)}
-          </p>
-          <p className="mt-1 text-xs text-neutral-600">Setoran − pengambilan sampai akhir {formatMonthLabel(monthId)}</p>
-        </div>
-        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 min-w-0 col-span-2">
-          <p className="text-sm text-neutral-400">Total Tabungan Orang Have</p>
-          <p className="text-lg font-semibold text-indigo-400 break-words">
-            {formatRupiah(totalTabunganOh)}
-          </p>
-          <p className="mt-1 text-xs text-neutral-600">Terkumpul sampai akhir {formatMonthLabel(monthId)}</p>
-        </div>
-      </div>
-
-      <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 min-w-0">
-        <p className="text-sm text-neutral-400">Sisa (Semua Pemasukan − Total Budget)</p>
-        <p className={`text-lg font-semibold break-words ${sisaBudget < 0 ? "text-red-400" : "text-green-400"}`}>
-          {formatRupiah(sisaBudget)}
-        </p>
-        {(carryIn !== 0 || withdrawal !== 0) && (
-          <p className="mt-1 text-xs text-neutral-600">
-            Pemasukan {formatRupiah(totalIncome)}
-            {carryIn !== 0 && ` + sisa bulan lalu ${formatRupiah(carryIn)}`}
-            {withdrawal !== 0 && ` + ambil tabungan/dana darurat ${formatRupiah(withdrawal)}`}
-            {` = ${formatRupiah(totalDana)}`}
-          </p>
-        )}
-      </div>
+      {/* 5. Uang aktual yang dipegang */}
+      <Section title="Uang Aktual yang Dipegang" hint="Sisa uang bulan ini + dana darurat">
+        <ActualMoneyChart sisaUang={sisaUang} danaDarurat={totalDanaDarurat} monthLabel={formatMonthLabel(monthId)} />
+      </Section>
 
       {/* Form set budget hanya untuk owner; read-only tidak melihatnya sama sekali */}
       {isOwner && !loading && (

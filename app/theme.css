@@ -234,3 +234,67 @@ html.light button[aria-label^="Ganti ke mode"] {
 /* select / textarea yang punya kelas bg-neutral-800 juga harus putih */
 html.light select.bg-neutral-800,
 html.light textarea.bg-neutral-800 { background-color: #ffffff; }
+
+/* ============================================================
+   PENINGKATAN MODE TERANG UNTUK JURNAL PRIBADI (v3)
+   ============================================================ */
+
+/* Baris / kotak yang hanya punya garis (tanpa latar) -> dibuat putih supaya tidak "melayang" di atas latar abu */
+html.light .rounded-md.border-neutral-800,
+html.light .rounded-lg.border-neutral-800,
+html.light .rounded-xl.border-neutral-800 {
+  background-color: #ffffff;
+  border-color: #b9c0cb;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+/* Kotak di dalam kartu: jangan dobel bayangan, beri tint tipis supaya terpisah dari kartunya */
+html.light .bg-neutral-900 .rounded-md.border-neutral-800,
+html.light .bg-neutral-900 .rounded-lg.border-neutral-800,
+html.light section .rounded-lg.border-neutral-800 {
+  background-color: #f6f7fa;
+  box-shadow: none;
+}
+/* Baris yang sedang diedit tetap menonjol */
+html.light .border-blue-500.bg-neutral-900 { background-color: #eff6ff; border-color: #2563eb; }
+
+/* Garis pemisah antar-baris di dalam kartu */
+html.light .border-t.border-neutral-800,
+html.light .border-b.border-neutral-800 { border-color: #c5cbd5; }
+
+/* Garis penanda kiri (audit / status): lebih tebal terlihat */
+html.light .border-l-2, html.light .border-l-4 { border-left-width: 4px; }
+
+/* Tombol / tautan netral besar di dashboard (Review Detail, Analisis, dst.) */
+html.light a.bg-neutral-800,
+html.light a.bg-neutral-700 {
+  background-color: #e3e7ed;
+  border: 1px solid #9aa3b2;
+  color: #111827;
+}
+html.light a.bg-neutral-800:hover,
+html.light a.bg-neutral-700:hover { background-color: #d5dae2; }
+
+/* Warna solid tambahan */
+html.light .text-white[class*="bg-teal-5"],
+html.light .text-white[class*="bg-teal-6"],
+html.light .text-white[class*="bg-teal-7"],
+html.light .text-white[class*="bg-teal-8"] { color: #ffffff; }
+
+/* Badge kecil abu (mis. "Arsip", nama kategori) */
+html.light span.bg-neutral-800 {
+  background-color: #dde1e8;
+  border: 1px solid #b9c0cb;
+}
+
+/* Teks dasar di kartu & daftar lebih pekat */
+html.light p, html.light h1, html.light h2, html.light h3, html.light label { color: inherit; }
+html.light ::selection { background: #bfdbfe; color: #0f172a; }
+
+/* Tombol disabled tetap terbaca */
+html.light button:disabled { opacity: 0.45; }
+
+/* Garis penanda kiri (mode audit): warna tidak boleh tertimpa aturan border umum */
+html.light [class*="border-neutral-800"][class*="border-l-emerald-700"] { border-left-color: #059669; }
+html.light [class*="border-neutral-800"][class*="border-l-amber-500"] { border-left-color: #f59e0b; }
+html.light [class*="border-neutral-800"][class*="border-l-sky-700"] { border-left-color: #0284c7; }
+html.light [class*="border-neutral-800"][class*="border-l-neutral-700"] { border-left-color: #9aa3b2; }
