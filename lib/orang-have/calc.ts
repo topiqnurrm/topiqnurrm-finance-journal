@@ -1,4 +1,5 @@
 import { OhKasExpense, OhLoan, OhMember, OhPayment } from "@/lib/types/orang-have";
+import { formatRupiah } from "@/lib/utils/currency";
 import { OH_DUE_DAY, OH_GRACE_DAY, OH_PERIOD_END, OH_PERIOD_START } from "./config";
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -86,4 +87,92 @@ export function projection(member: OhMember, payments: OhPayment[], kasShare: nu
 // Nama file bukti yang aman: tanpa folder / karakter aneh
 export function isValidProofName(name: string) {
   return name === "" || (/^[A-Za-z0-9._ -]+$/.test(name) && !name.includes(".."));
+}
+
+// ---------- History keseluruhan ----------
+export type OhHistoryKind = "setoran" | "kas" | "pinjam" | "lunas";
+
+export interface OhHistoryItem {
+  key: string;
+  date: string; // YYYY-MM-DD
+  kind: OhHistoryKind;
+  title: string;
+  detail: string;
+  delta: number; // pengaruh ke uang aktual (+ masuk, - keluar)
+  proof: string;
+  balance: number; // uang aktual setelah transaksi ini
+}
+
+const KIND_ORDER: Record<OhHistoryKind, number> = { setoran: 0, pinjam: 1, lunas: 2, kas: 3 };
+
+// Semua kejadian digabung dan diurutkan dari lama ke baru, lalu dihitung saldo berjalan.
+// Saldo akhir = tabungan + saldo kas - pinjaman belum kembali (sama dengan "Uang aktual" di Ringkasan).
+export function buildHistory(
+  members: (OhMember & { id: string })[],
+  payments: OhPayment[],
+  expenses: OhKasExpense[],
+  loans: OhLoan[]
+): OhHistoryItem[] {
+  const name = (id: string) => members.find((m) => m.id === id)?.name ?? "(anggota dihapus)";
+  type Raw = Omit<OhHistoryItem, "balance"> & { created: number };
+  const raw: Raw[] = [];
+
+  payments.forEach((p, i) =>
+    raw.push({
+      key: `p:${p.id ?? i}`,
+      date: p.paidDate,
+      kind: "setoran",
+      title: `Setoran ${name(p.memberId)}`,
+      detail: `Periode ${monthLabelLong(p.month)} · tabungan ${formatRupiah(p.savings)} + kas ${formatRupiah(p.kas)}${p.note ? ` · ${p.note}` : ""}`,
+      delta: p.savings + p.kas,
+      proof: p.proof || "",
+      created: p.createdAt ?? 0,
+    })
+  );
+  expenses.forEach((e, i) =>
+    raw.push({
+      key: `e:${e.id ?? i}`,
+      date: e.date,
+      kind: "kas",
+      title: "Pengeluaran kas",
+      detail: e.note || "-",
+      delta: -e.amount,
+      proof: e.proof || "",
+      created: e.createdAt ?? 0,
+    })
+  );
+  loans.forEach((l, i) => {
+    raw.push({
+      key: `l:${l.id ?? i}`,
+      date: l.date,
+      kind: "pinjam",
+      title: `Pinjaman ${l.borrower}`,
+      detail: `Biaya pinjaman ${formatRupiah(l.fee)}${l.dueDate ? ` · jatuh tempo ${l.dueDate}` : ""}${l.note ? ` · ${l.note}` : ""}`,
+      delta: -l.amount,
+      proof: l.proof || "",
+      created: l.createdAt ?? 0,
+    });
+    if (l.repaidDate) {
+      raw.push({
+        key: `r:${l.id ?? i}`,
+        date: l.repaidDate,
+        kind: "lunas",
+        title: `Pinjaman ${l.borrower} lunas`,
+        detail: `Pokok ${formatRupiah(l.amount)} kembali + biaya ${formatRupiah(l.fee)} masuk kas`,
+        delta: l.amount + l.fee,
+        proof: l.repaidProof || "",
+        created: l.createdAt ?? 0,
+      });
+    }
+  });
+
+  raw.sort(
+    (a, b) =>
+      a.date.localeCompare(b.date) || KIND_ORDER[a.kind] - KIND_ORDER[b.kind] || a.created - b.created
+  );
+  let bal = 0;
+  return raw.map(({ created: _c, ...r }) => {
+    bal += r.delta;
+    return { ...r, balance: bal };
+  });
 }

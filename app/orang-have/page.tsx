@@ -10,15 +10,19 @@ import OhPayments from "@/components/orang-have/OhPayments";
 import OhKas from "@/components/orang-have/OhKas";
 import OhLoans from "@/components/orang-have/OhLoans";
 import OhMembers from "@/components/orang-have/OhMembers";
+import OhHistory from "@/components/orang-have/OhHistory";
+import OhExport from "@/components/orang-have/OhExport";
 
-type Tab = "ringkasan" | "setoran" | "kas" | "pinjaman" | "anggota";
+type Tab = "ringkasan" | "setoran" | "kas" | "pinjaman" | "history" | "anggota" | "export";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "ringkasan", label: "Ringkasan" },
   { id: "setoran", label: "Setoran" },
   { id: "kas", label: "Kas" },
   { id: "pinjaman", label: "Pinjaman" },
+  { id: "history", label: "History" },
   { id: "anggota", label: "Anggota" },
+  { id: "export", label: "Export" },
 ];
 
 // Halaman publik: siapa pun bisa melihat tanpa login. Tambah/ubah/hapus hanya untuk owner.
@@ -94,6 +98,12 @@ export default function OrangHavePage() {
               editLoan={oh.editLoan}
               removeLoan={oh.removeLoan}
             />
+          )}
+          {tab === "history" && (
+            <OhHistory members={oh.members} payments={oh.payments} expenses={oh.expenses} loans={oh.loans} />
+          )}
+          {tab === "export" && (
+            <OhExport members={oh.members} payments={oh.payments} expenses={oh.expenses} loans={oh.loans} />
           )}
           {tab === "anggota" && (
             <OhMembers

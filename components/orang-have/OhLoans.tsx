@@ -154,7 +154,7 @@ export default function OhLoans({ isOwner, members, loans, addLoan, editLoan, re
               {l.dueDate && ` · jatuh tempo ${l.dueDate}`}
               {l.note && ` · ${l.note}`}
             </p>
-            <p className="text-xs text-neutral-500">Biaya pinjaman {formatRupiah(l.fee)}</p>
+            <p className="text-xs text-neutral-500">Biaya pinjaman {formatRupiah(l.fee)} (bukan biaya admin)</p>
           </div>
           <div className="shrink-0 text-right">
             <p className={`text-sm font-semibold ${isRepaid ? "text-neutral-400" : "text-amber-400"}`}>
@@ -235,7 +235,7 @@ export default function OhLoans({ isOwner, members, loans, addLoan, editLoan, re
         <p className="text-xs text-neutral-400">Belum dikembalikan</p>
         <p className="break-words text-lg font-semibold text-amber-400">{formatRupiah(outstandingTotal)}</p>
         <p className="mt-1 text-xs text-neutral-600">
-          {outstanding.length} pinjaman. Biaya pinjaman masuk kas setelah pinjaman ditandai lunas.
+          {outstanding.length} pinjaman. Biaya pinjaman (bukan biaya admin) masuk kas setelah pinjaman ditandai lunas. Biaya admin dicatat di Kas → Pengeluaran Kas.
         </p>
       </div>
 
@@ -282,12 +282,16 @@ export default function OhLoans({ isOwner, members, loans, addLoan, editLoan, re
               <input
                 type="number"
                 min="0"
-                placeholder="Biaya (Rp)"
+                placeholder="Biaya pinjaman (Rp)"
                 value={fee}
                 onChange={(e) => setFee(e.target.value)}
                 className="min-w-0 flex-1 rounded-md bg-neutral-800 p-2 text-sm"
               />
             </div>
+            <p className="rounded-md border border-amber-700 bg-amber-950/30 p-2 text-xs text-amber-400">
+              <b>Biaya pinjaman bukan biaya admin.</b> Ini imbalan/jasa pinjam yang dibayar peminjam ke kelompok, dan masuk
+              kas setelah pinjaman lunas. Biaya admin (mis. admin transfer) dicatat terpisah di tab Kas → Pengeluaran Kas.
+            </p>
             <label className="block text-xs text-neutral-500">
               Tanggal pinjam
               <input
