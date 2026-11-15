@@ -55,7 +55,16 @@ export function memberTotals(member: OhMember, payments: OhPayment[]) {
   return { savings, kas, paidMonths, remaining, progress };
 }
 
+export const isAudit = (e: OhKasExpense) => e.type === "audit";
+
+// Pengaruh satu catatan ke saldo kas: pengeluaran = minus; audit "in" = plus, audit "out" = minus
+export function kasEntryDelta(e: OhKasExpense): number {
+  if (isAudit(e)) return e.direction === "in" ? e.amount : -e.amount;
+  return -e.amount;
+}
+
 // Biaya pinjaman dihitung masuk kas setelah pinjaman ditandai lunas.
+// Audit: selisih lebih menambah kas, selisih kurang mengurangi kas (dipisah dari pengeluaran biasa).
 export function kasSummary(
   payments: OhPayment[],
   expenses: OhKasExpense[],
@@ -64,11 +73,13 @@ export function kasSummary(
 ) {
   const kasIn = payments.reduce((s, p) => s + p.kas, 0);
   const feeIn = loans.filter((l) => l.repaidDate).reduce((s, l) => s + l.fee, 0);
-  const kasOut = expenses.reduce((s, e) => s + e.amount, 0);
-  const balance = kasIn + feeIn - kasOut;
+  const kasOut = expenses.filter((e) => !isAudit(e)).reduce((s, e) => s + e.amount, 0);
+  const auditIn = expenses.filter((e) => isAudit(e) && e.direction === "in").reduce((s, e) => s + e.amount, 0);
+  const auditOut = expenses.filter((e) => isAudit(e) && e.direction !== "in").reduce((s, e) => s + e.amount, 0);
+  const balance = kasIn + feeIn + auditIn - kasOut - auditOut;
   // sisa kas dibagi rata; dibulatkan ke bawah (sisa receh tetap di kas)
   const share = memberCount > 0 ? Math.floor(balance / memberCount) : 0;
-  return { kasIn, feeIn, kasOut, balance, share };
+  return { kasIn, feeIn, kasOut, auditIn, auditOut, balance, share };
 }
 
 export function poolSummary(payments: OhPayment[], kasBalance: number, loans: OhLoan[]) {
@@ -90,7 +101,7 @@ export function isValidProofName(name: string) {
 }
 
 // ---------- History keseluruhan ----------
-export type OhHistoryKind = "setoran" | "kas" | "pinjam" | "lunas";
+export type OhHistoryKind = "setoran" | "kas" | "audit" | "pinjam" | "lunas";
 
 export interface OhHistoryItem {
   key: string;
@@ -103,7 +114,7 @@ export interface OhHistoryItem {
   balance: number; // uang aktual setelah transaksi ini
 }
 
-const KIND_ORDER: Record<OhHistoryKind, number> = { setoran: 0, pinjam: 1, lunas: 2, kas: 3 };
+const KIND_ORDER: Record<OhHistoryKind, number> = { setoran: 0, pinjam: 1, lunas: 2, kas: 3, audit: 4 };
 
 // Semua kejadian digabung dan diurutkan dari lama ke baru, lalu dihitung saldo berjalan.
 // Saldo akhir = tabungan + saldo kas - pinjaman belum kembali (sama dengan "Uang aktual" di Ringkasan).
@@ -133,10 +144,10 @@ export function buildHistory(
     raw.push({
       key: `e:${e.id ?? i}`,
       date: e.date,
-      kind: "kas",
-      title: "Pengeluaran kas",
+      kind: isAudit(e) ? "audit" : "kas",
+      title: isAudit(e) ? (e.direction === "in" ? "Audit: uang lebih" : "Audit: uang kurang") : "Pengeluaran kas",
       detail: e.note || "-",
-      delta: -e.amount,
+      delta: kasEntryDelta(e),
       proof: e.proof || "",
       created: e.createdAt ?? 0,
     })

@@ -20,8 +20,15 @@ export interface OhPayment {
   createdAt: number;
 }
 
+// Catatan kas: "expense" = pengeluaran biasa (selalu mengurangi kas).
+// "audit" = penyesuaian hasil audit: arah "in" = uang lebih (mis. bonus bank), "out" = uang kurang.
+export type OhKasEntryType = "expense" | "audit";
+export type OhKasDirection = "in" | "out";
+
 export interface OhKasExpense {
   id?: string;
+  type?: OhKasEntryType; // kosong (data lama) = expense
+  direction?: OhKasDirection; // kosong (data lama) = out
   date: string;
   amount: number;
   note: string;

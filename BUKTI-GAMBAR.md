@@ -12,6 +12,7 @@ public/
         ├── kas/         bukti pengeluaran kas (tab Kas)
         ├── pinjaman/    bukti pinjaman (tab Pinjaman)
         └── lunas/       bukti pelunasan pinjaman (tab Pinjaman, "Tandai lunas")
+        tambah audit
 ```
 
 Buat folder yang belum ada. Pengaturan (versi dan nama folder) ada di `lib/orang-have/config.ts`:

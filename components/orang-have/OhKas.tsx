@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { OhKasExpense, OhLoan, OhMember, OhPayment } from "@/lib/types/orang-have";
+import { OhKasDirection, OhKasEntryType, OhKasExpense, OhLoan, OhMember, OhPayment } from "@/lib/types/orang-have";
 import { formatRupiah } from "@/lib/utils/currency";
 import { getLocalDateStr } from "@/lib/utils/date";
 import { OH_PAYOUT_LABEL } from "@/lib/orang-have/config";
-import { isValidProofName, kasSummary } from "@/lib/orang-have/calc";
+import { isAudit, isValidProofName, kasEntryDelta, kasSummary, poolSummary } from "@/lib/orang-have/calc";
 import OhProofLink from "./OhProofLink";
 import { ohProofDir } from "@/lib/orang-have/config";
 
@@ -24,10 +24,15 @@ interface Props {
 
 export default function OhKas({ isOwner, members, payments, expenses, loans, addExpense, editExpense, removeExpense }: Props) {
   const kas = kasSummary(payments, expenses, loans, members.length);
+  const pool = poolSummary(payments, kas.balance, loans);
+  const auditNet = kas.auditIn - kas.auditOut;
 
   const [editing, setEditing] = useState<Expense | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [date, setDate] = useState(getLocalDateStr());
+  const [entryType, setEntryType] = useState<OhKasEntryType>("expense");
+  const [direction, setDirection] = useState<OhKasDirection>("in");
+  const [bankBalance, setBankBalance] = useState(""); // bantu audit: saldo bank sebenarnya
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [proof, setProof] = useState("");
@@ -37,15 +42,21 @@ export default function OhKas({ isOwner, members, payments, expenses, loans, add
     setEditing(null);
     setShowForm(false);
     setDate(getLocalDateStr());
+    setEntryType("expense");
+    setDirection("in");
+    setBankBalance("");
     setAmount("");
     setNote("");
     setProof("");
   }
 
   function startEdit(e: Expense) {
-    if (!window.confirm("Edit pengeluaran kas ini? Form akan terisi otomatis.")) return;
+    if (!window.confirm("Edit catatan kas ini? Form akan terisi otomatis.")) return;
     setEditing(e);
     setShowForm(true);
+    setEntryType(isAudit(e) ? "audit" : "expense");
+    setDirection(e.direction === "out" ? "out" : "in");
+    setBankBalance("");
     setDate(e.date);
     setAmount(String(e.amount));
     setNote(e.note || "");
@@ -56,18 +67,31 @@ export default function OhKas({ isOwner, members, payments, expenses, loans, add
     ev.preventDefault();
     const a = parseInt(amount, 10);
     if (!(a > 0) || !note.trim()) {
-      window.alert("Isi jumlah dan keterangan pengeluaran.");
+      window.alert(entryType === "audit" ? "Isi jumlah selisih dan keterangan audit." : "Isi jumlah dan keterangan pengeluaran.");
       return;
     }
     if (!isValidProofName(proof.trim())) {
       window.alert("Nama file bukti hanya boleh huruf, angka, titik, spasi, minus, dan underscore (tanpa folder).");
       return;
     }
-    if (!window.confirm(editing ? "Simpan perubahan pengeluaran kas ini?" : "Simpan pengeluaran kas ini?")) return;
+    if (!window.confirm(
+        entryType === "audit"
+          ? `Simpan audit: uang ${direction === "in" ? "LEBIH (menambah kas)" : "KURANG (mengurangi kas)"} ${formatRupiah(a)}?`
+          : editing
+          ? "Simpan perubahan pengeluaran kas ini?"
+          : "Simpan pengeluaran kas ini?"
+      )) return;
 
     setSubmitting(true);
     try {
-      const payload = { date, amount: a, note: note.trim(), proof: proof.trim() };
+      const payload = {
+        date,
+        amount: a,
+        note: note.trim(),
+        proof: proof.trim(),
+        type: entryType,
+        direction: (entryType === "audit" ? direction : "out") as OhKasDirection,
+      };
       if (editing) await editExpense(editing.id, payload);
       else await addExpense({ ...payload, createdAt: Date.now() });
       resetForm();
@@ -78,8 +102,17 @@ export default function OhKas({ isOwner, members, payments, expenses, loans, add
     setSubmitting(false);
   }
 
+  // Bantu audit: bandingkan saldo bank sebenarnya dengan uang aktual di aplikasi
+  const bankNum = parseInt(bankBalance, 10);
+  const bankDiff = Number.isFinite(bankNum) ? bankNum - pool.available : null;
+  function useBankDiff() {
+    if (bankDiff === null || bankDiff === 0) return;
+    setDirection(bankDiff > 0 ? "in" : "out");
+    setAmount(String(Math.abs(bankDiff)));
+  }
+
   function handleDelete(e: Expense) {
-    if (!window.confirm(`Hapus pengeluaran kas "${e.note}"? Data tidak bisa dikembalikan.`)) return;
+    if (!window.confirm(`Hapus catatan kas "${e.note}"? Data tidak bisa dikembalikan.`)) return;
     removeExpense(e.id).catch((err) => {
       console.error(err);
       window.alert("Gagal menghapus.");
@@ -92,7 +125,19 @@ export default function OhKas({ isOwner, members, payments, expenses, loans, add
         <Card label="Iuran kas masuk" value={formatRupiah(kas.kasIn)} />
         <Card label="Biaya pinjaman masuk" value={formatRupiah(kas.feeIn)} hint="Dari pinjaman yang sudah lunas" />
         <Card label="Pengeluaran kas" value={formatRupiah(kas.kasOut)} tone="text-red-500" />
-        <Card label="Saldo kas" value={formatRupiah(kas.balance)} tone={kas.balance < 0 ? "text-red-500" : "text-green-500"} />
+        <Card
+          label="Hasil audit (selisih)"
+          value={`${auditNet > 0 ? "+" : auditNet < 0 ? "−" : ""}${formatRupiah(Math.abs(auditNet))}`}
+          tone={auditNet > 0 ? "text-green-500" : auditNet < 0 ? "text-red-500" : "text-white"}
+          hint={`Lebih ${formatRupiah(kas.auditIn)} · kurang ${formatRupiah(kas.auditOut)}`}
+        />
+        <Card
+          className="col-span-2"
+          label="Saldo kas"
+          value={formatRupiah(kas.balance)}
+          tone={kas.balance < 0 ? "text-red-500" : "text-green-500"}
+          hint="Iuran + biaya pinjaman + audit lebih − pengeluaran − audit kurang"
+        />
       </div>
 
       <div className="min-w-0 rounded-xl border border-neutral-800 bg-neutral-900 p-4">
@@ -103,7 +148,7 @@ export default function OhKas({ isOwner, members, payments, expenses, loans, add
 
       <div className="min-w-0 space-y-3 rounded-xl border border-neutral-800 bg-neutral-900 p-4">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold text-white">Pengeluaran kas</h2>
+          <h2 className="text-sm font-semibold text-white">Pengeluaran & audit kas</h2>
           {isOwner && !showForm && (
             <button
               onClick={() => setShowForm(true)}
@@ -116,11 +161,87 @@ export default function OhKas({ isOwner, members, payments, expenses, loans, add
 
         {isOwner && showForm && (
           <form onSubmit={handleSave} className="space-y-2 rounded-md border border-neutral-800 p-3">
-            <p className="text-xs text-neutral-400">{editing ? "Mengedit pengeluaran" : "Pengeluaran baru"}</p>
+            <p className="text-xs text-neutral-400">{editing ? "Mengedit catatan kas" : "Catatan kas baru"}</p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setEntryType("expense")}
+                className={`flex-1 rounded-md py-2 text-sm ${
+                  entryType === "expense" ? "bg-red-600 text-white" : "bg-neutral-800 text-neutral-400"
+                }`}
+              >
+                Pengeluaran
+              </button>
+              <button
+                type="button"
+                onClick={() => setEntryType("audit")}
+                className={`flex-1 rounded-md py-2 text-sm ${
+                  entryType === "audit" ? "bg-purple-600 text-white" : "bg-neutral-800 text-neutral-400"
+                }`}
+              >
+                Audit
+              </button>
+            </div>
+
+            {entryType === "audit" && (
+              <div className="space-y-2 rounded-md border border-purple-600 bg-purple-950 p-3">
+                <p className="text-xs text-purple-300">
+                  Audit = mencocokkan saldo bank dengan catatan. Selisihnya dicatat sebagai penyesuaian kas, bisa lebih
+                  (mis. bonus bunga bank) atau kurang.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setDirection("in")}
+                    className={`flex-1 rounded-md py-2 text-sm ${
+                      direction === "in" ? "bg-green-600 text-white" : "bg-neutral-800 text-neutral-400"
+                    }`}
+                  >
+                    Uang lebih (+)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDirection("out")}
+                    className={`flex-1 rounded-md py-2 text-sm ${
+                      direction === "out" ? "bg-red-600 text-white" : "bg-neutral-800 text-neutral-400"
+                    }`}
+                  >
+                    Uang kurang (−)
+                  </button>
+                </div>
+                {!editing && (
+                  <div className="space-y-1">
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="Opsional: saldo bank sebenarnya (Rp)"
+                      value={bankBalance}
+                      onChange={(e) => setBankBalance(e.target.value)}
+                      className="w-full min-w-0 rounded-md bg-neutral-800 p-2 text-sm"
+                    />
+                    <p className="break-words text-xs text-neutral-500">
+                      Uang aktual di aplikasi: {formatRupiah(pool.available)}
+                      {bankDiff !== null &&
+                        ` · selisih ${bankDiff > 0 ? "+" : bankDiff < 0 ? "−" : ""}${formatRupiah(Math.abs(bankDiff))}`}
+                    </p>
+                    {bankDiff !== null && bankDiff !== 0 && (
+                      <button
+                        type="button"
+                        onClick={useBankDiff}
+                        className="rounded-md bg-neutral-700 px-3 py-1 text-xs text-white"
+                      >
+                        Pakai selisih ini
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             <input
               type="number"
               min="0"
-              placeholder="Jumlah (Rp)"
+              placeholder={entryType === "audit" ? "Jumlah selisih (Rp)" : "Jumlah (Rp)"}
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               className="w-full min-w-0 rounded-md bg-neutral-800 p-2 text-sm"
@@ -128,7 +249,7 @@ export default function OhKas({ isOwner, members, payments, expenses, loans, add
             />
             <input
               type="text"
-              placeholder="Keterangan (mis. biaya admin rekening)"
+              placeholder={entryType === "audit" ? "Keterangan (mis. bonus simpanan dari bank)" : "Keterangan (mis. biaya admin rekening)"}
               value={note}
               onChange={(e) => setNote(e.target.value)}
               className="w-full min-w-0 rounded-md bg-neutral-800 p-2 text-sm"
@@ -143,7 +264,7 @@ export default function OhKas({ isOwner, members, payments, expenses, loans, add
             />
             <input
               type="text"
-              placeholder={`Nama file bukti (taruh di ${ohProofDir("kas")}) - wajib`}
+              placeholder={`Nama file bukti (taruh di ${ohProofDir(entryType === "audit" ? "audit" : "kas")}) - ${entryType === "audit" ? "mis. screenshot mutasi" : "wajib"}`}
               value={proof}
               onChange={(e) => setProof(e.target.value)}
               className="w-full min-w-0 rounded-md bg-neutral-800 p-2 text-sm"
@@ -164,15 +285,22 @@ export default function OhKas({ isOwner, members, payments, expenses, loans, add
         )}
 
         {expenses.length === 0 ? (
-          <p className="text-sm text-neutral-500">Belum ada pengeluaran kas.</p>
+          <p className="text-sm text-neutral-500">Belum ada catatan kas.</p>
         ) : (
           expenses.map((e) => (
             <div key={e.id} className="flex items-start justify-between gap-3 border-t border-neutral-800 pt-2">
               <div className="min-w-0">
-                <p className="break-words text-sm text-white">{e.note}</p>
+                <p className="break-words text-sm text-white">
+                  {isAudit(e) && (
+                    <span className="mr-2 rounded border border-purple-600 bg-purple-950 px-1.5 py-0.5 text-[10px] text-purple-300">
+                      Audit
+                    </span>
+                  )}
+                  {e.note}
+                </p>
                 <p className="text-xs text-neutral-500">{e.date}</p>
                 <div className="flex items-center gap-3">
-                  <OhProofLink proof={e.proof} kind="kas" />
+                  <OhProofLink proof={e.proof} kind={isAudit(e) ? "audit" : "kas"} />
                   {!e.proof && <span className="text-xs text-amber-500">Belum ada bukti</span>}
                   {isOwner && (
                     <>
@@ -186,7 +314,12 @@ export default function OhKas({ isOwner, members, payments, expenses, loans, add
                   )}
                 </div>
               </div>
-              <p className="shrink-0 text-sm font-semibold text-red-500">{formatRupiah(e.amount)}</p>
+              <p
+                className={`shrink-0 text-sm font-semibold ${kasEntryDelta(e) >= 0 ? "text-green-500" : "text-red-500"}`}
+              >
+                {kasEntryDelta(e) >= 0 ? "+" : "−"}
+                {formatRupiah(e.amount)}
+              </p>
             </div>
           ))
         )}
@@ -195,9 +328,21 @@ export default function OhKas({ isOwner, members, payments, expenses, loans, add
   );
 }
 
-function Card({ label, value, hint, tone = "text-white" }: { label: string; value: string; hint?: string; tone?: string }) {
+function Card({
+  label,
+  value,
+  hint,
+  tone = "text-white",
+  className = "",
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  tone?: string;
+  className?: string;
+}) {
   return (
-    <div className="min-w-0 rounded-xl border border-neutral-800 bg-neutral-900 p-4">
+    <div className={`min-w-0 rounded-xl border border-neutral-800 bg-neutral-900 p-4 ${className}`}>
       <p className="text-xs text-neutral-400">{label}</p>
       <p className={`break-words text-lg font-semibold ${tone}`}>{value}</p>
       {hint && <p className="mt-1 text-xs text-neutral-600">{hint}</p>}

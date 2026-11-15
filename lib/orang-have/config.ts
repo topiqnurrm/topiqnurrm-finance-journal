@@ -23,15 +23,17 @@ export const OH_ACCOUNT_INFO = "Belum ditentukan";
 // Folder bukti di dalam proyek. Struktur:
 //   public/tabungan-bersama/<OH_PROOF_VERSION>/nabung/    -> bukti setoran
 //   public/tabungan-bersama/<OH_PROOF_VERSION>/kas/       -> bukti pengeluaran kas
+//   public/tabungan-bersama/<OH_PROOF_VERSION>/audit/     -> bukti audit (mis. screenshot mutasi / saldo bank)
 //   public/tabungan-bersama/<OH_PROOF_VERSION>/pinjaman/  -> bukti pinjaman
 //   public/tabungan-bersama/<OH_PROOF_VERSION>/lunas/     -> bukti pelunasan pinjaman
 // Mau ganti versi (mis. v2)? Cukup ubah OH_PROOF_VERSION dan buat folder barunya.
 export const OH_PROOF_VERSION = "v1";
 export const OH_PROOF_ROOT = `/tabungan-bersama/${OH_PROOF_VERSION}/`;
-export type OhProofKind = "nabung" | "kas" | "pinjaman" | "lunas";
+export type OhProofKind = "nabung" | "kas" | "audit" | "pinjaman" | "lunas";
 export const OH_PROOF_FOLDERS: Record<OhProofKind, string> = {
   nabung: "nabung",
   kas: "kas",
+  audit: "audit",
   pinjaman: "pinjaman",
   lunas: "lunas",
 };

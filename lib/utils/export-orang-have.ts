@@ -1,7 +1,7 @@
 import * as XLSX from "xlsx";
 import { OhKasExpense, OhLoan, OhMember, OhPayment } from "@/lib/types/orang-have";
 import { OH_PAYOUT_LABEL } from "@/lib/orang-have/config";
-import { buildHistory, kasSummary, memberTotals, monthLabelLong, periodMonths, poolSummary, projection } from "@/lib/orang-have/calc";
+import { buildHistory, isAudit, kasEntryDelta, kasSummary, memberTotals, monthLabelLong, periodMonths, poolSummary, projection } from "@/lib/orang-have/calc";
 
 type Member = OhMember & { id: string };
 
@@ -39,6 +39,8 @@ export function exportOrangHave({ members, payments, expenses, loans, from, to }
     { Ringkasan: "Kas Masuk (iuran)", Nilai: kas.kasIn },
     { Ringkasan: "Biaya Pinjaman Masuk Kas (pinjaman lunas)", Nilai: kas.feeIn },
     { Ringkasan: "Pengeluaran Kas", Nilai: kas.kasOut },
+    { Ringkasan: "Audit: Uang Lebih (menambah kas)", Nilai: kas.auditIn },
+    { Ringkasan: "Audit: Uang Kurang (mengurangi kas)", Nilai: kas.auditOut },
     { Ringkasan: "Saldo Kas", Nilai: kas.balance },
     { Ringkasan: "Total Dana Kelompok", Nilai: pool.total },
     { Ringkasan: "Sedang Dipinjam", Nilai: pool.outstanding },
@@ -46,7 +48,7 @@ export function exportOrangHave({ members, payments, expenses, loans, from, to }
     { Ringkasan: `Bagian Kas per Anggota (${OH_PAYOUT_LABEL})`, Nilai: kas.share },
     { Ringkasan: "Jumlah Anggota", Nilai: members.length },
     { Ringkasan: "Jumlah Catatan Setoran", Nilai: payments.length },
-    { Ringkasan: "Jumlah Pengeluaran Kas", Nilai: expenses.length },
+    { Ringkasan: "Jumlah Catatan Kas (pengeluaran + audit)", Nilai: expenses.length },
     { Ringkasan: "Jumlah Pinjaman", Nilai: loans.length },
     { Ringkasan: "Diekspor", Nilai: new Date().toLocaleString("id-ID") },
   ];
@@ -98,9 +100,12 @@ export function exportOrangHave({ members, payments, expenses, loans, from, to }
     .sort((a, b) => a.date.localeCompare(b.date))
     .map((e) => ({
       Tanggal: e.date,
+      Jenis: isAudit(e) ? "Audit" : "Pengeluaran",
+      Arah: kasEntryDelta(e) >= 0 ? "Masuk (lebih)" : "Keluar",
       Jumlah: e.amount,
+      "Pengaruh ke Kas": kasEntryDelta(e),
       Keterangan: e.note || "",
-      "File Bukti (folder kas)": e.proof || "",
+      "File Bukti (folder kas / audit)": e.proof || "",
     }));
 
   const loanRows = loans
@@ -124,7 +129,7 @@ export function exportOrangHave({ members, payments, expenses, loans, from, to }
     .filter((i) => inRange(i.date, from, to))
     .map((i) => ({
       Tanggal: i.date,
-      Jenis: { setoran: "Setoran", kas: "Pengeluaran Kas", pinjam: "Pinjaman", lunas: "Pelunasan" }[i.kind],
+      Jenis: { setoran: "Setoran", kas: "Pengeluaran Kas", audit: "Audit Kas", pinjam: "Pinjaman", lunas: "Pelunasan" }[i.kind],
       Keterangan: i.title,
       Detail: i.detail,
       Pengaruh: i.delta,

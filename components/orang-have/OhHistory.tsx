@@ -17,18 +17,21 @@ interface Props {
 const KIND_LABEL: Record<OhHistoryKind, string> = {
   setoran: "Setoran",
   kas: "Kas keluar",
+  audit: "Audit",
   pinjam: "Pinjam",
   lunas: "Lunas",
 };
 const KIND_BADGE: Record<OhHistoryKind, string> = {
   setoran: "bg-green-950/40 text-green-400 border-green-800",
   kas: "bg-red-950/40 text-red-400 border-red-800",
+  audit: "bg-purple-950 text-purple-300 border-purple-600",
   pinjam: "bg-amber-950/30 text-amber-400 border-amber-700",
   lunas: "bg-blue-950 text-blue-300 border-blue-500",
 };
 const PROOF_KIND: Record<OhHistoryKind, OhProofKind> = {
   setoran: "nabung",
   kas: "kas",
+  audit: "audit",
   pinjam: "pinjaman",
   lunas: "lunas",
 };
@@ -38,6 +41,7 @@ const FILTERS: { id: Filter; label: string }[] = [
   { id: "semua", label: "Semua" },
   { id: "setoran", label: "Setoran" },
   { id: "kas", label: "Kas keluar" },
+  { id: "audit", label: "Audit" },
   { id: "pinjam", label: "Pinjam" },
   { id: "lunas", label: "Lunas" },
 ];
