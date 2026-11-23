@@ -29,9 +29,15 @@ export default function CategoryBreakdown({ budget, transactions }: { budget: Bu
       <p className="text-sm text-neutral-400">Sisa Budget per Kategori</p>
       {CATEGORIES.map((cat) => {
         const limit = budget?.[cat] ?? 0;
-        const used = transactions.filter((t) => t.type === "expense" && t.category === cat).reduce((s, t) => s + t.amount, 0);
+        const spent = transactions.filter((t) => t.type === "expense" && t.category === cat).reduce((s, t) => s + t.amount, 0);
+        // Audit bisa juga berupa pemasukan (uang lebih): menambah sisa budget kategori audit
+        const auditIncome =
+          cat === "audit"
+            ? transactions.filter((t) => t.type === "income" && t.category === "audit").reduce((s, t) => s + t.amount, 0)
+            : 0;
+        const used = spent - auditIncome;
         const remaining = limit - used;
-        const pct = limit > 0 ? Math.min((used / limit) * 100, 100) : 0;
+        const pct = limit > 0 ? Math.max(0, Math.min((used / limit) * 100, 100)) : 0;
         const isOver = remaining < 0;
         return (
           <div key={cat}>
@@ -42,7 +48,11 @@ export default function CategoryBreakdown({ budget, transactions }: { budget: Bu
             <div className="w-full h-2 bg-neutral-800 rounded-full overflow-hidden">
               <div className={`h-full ${isOver ? "bg-red-500" : "bg-blue-500"}`} style={{ width: `${pct}%` }} />
             </div>
-            <p className="text-xs text-neutral-500 mt-1">Terpakai {formatRupiah(used)} dari {formatRupiah(limit)}</p>
+            <p className="text-xs text-neutral-500 mt-1">
+              {cat === "audit" && auditIncome !== 0
+                ? `Pengeluaran ${formatRupiah(spent)} − pemasukan audit ${formatRupiah(auditIncome)} = terpakai ${formatRupiah(used)} dari ${formatRupiah(limit)}`
+                : `Terpakai ${formatRupiah(used)} dari ${formatRupiah(limit)}`}
+            </p>
           </div>
         );
       })}

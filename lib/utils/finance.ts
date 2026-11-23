@@ -16,7 +16,7 @@ export interface MonthTotals {
   expense: number; // pengeluaran bulan ini (tanpa hutang, tanpa sisa dibawa)
   carryIn: number; // sisa uang dari bulan lalu
   carryOut: number; // sisa uang yang dibawa ke bulan depan
-  withdrawal: number; // uang diambil dari tabungan / dana darurat bulan ini
+  withdrawal: number; // uang diambil dari tabungan / dana darurat / tabungan orang have bulan ini
   sisaUang: number; // income + carryIn + withdrawal - expense - carryOut
   debtOut: number; // hutang/piutang uang keluar (tidak dihitung)
   debtIn: number; // hutang/piutang uang masuk (tidak dihitung)
@@ -66,8 +66,8 @@ export function calcMonthTotals(transactions: TxLike[], monthId: string): MonthT
   return r;
 }
 
-// Saldo Tabungan & Dana Darurat kumulatif sampai akhir bulan yang dipilih:
-// setoran (pengeluaran berkategori tabungan / dana_darurat) dikurangi pengambilan.
+// Saldo Tabungan, Dana Darurat & Tabungan Orang Have kumulatif sampai akhir bulan yang dipilih:
+// setoran (pengeluaran berkategori tabungan / dana_darurat / tabungan_oh) dikurangi pengambilan.
 export function calcSavingsBalance(transactions: TxLike[], upToMonthId: string) {
   let tabungan = 0;
   let danaDarurat = 0;
@@ -78,7 +78,7 @@ export function calcSavingsBalance(transactions: TxLike[], upToMonthId: string) 
     if (sign === 0) continue;
     if (t.category === "tabungan") tabungan += sign * t.amount;
     else if (t.category === "dana_darurat") danaDarurat += sign * t.amount;
-    else if (t.category === "tabungan_oh" && sign === 1) tabunganOh += t.amount;
+    else if (t.category === "tabungan_oh") tabunganOh += sign * t.amount;
   }
   return { tabungan, danaDarurat, tabunganOh };
 }

@@ -84,6 +84,10 @@ export function exportToExcel({ transactions, journals, from, to }: ExportOption
     .filter((t) => t.type === "withdrawal" && t.category === "dana_darurat")
     .reduce((s, t) => s + t.amount, 0);
 
+  const withdrawOh = filteredTransactions
+    .filter((t) => t.type === "withdrawal" && t.category === "tabungan_oh")
+    .reduce((s, t) => s + t.amount, 0);
+
   // Dihitung dari baris yang ada di sheet Transaksi pada rentang ini
   const summaryRows = [
     { Ringkasan: "Total Pemasukan (tanpa hutang/piutang & sisa bulan)", Nilai: totalIncome },
@@ -92,6 +96,7 @@ export function exportToExcel({ transactions, journals, from, to }: ExportOption
     { Ringkasan: "Sisa Dibawa ke Bulan Depan (bukan pemasukan/pengeluaran)", Nilai: carryOut },
     { Ringkasan: "Diambil dari Tabungan (bukan pemasukan/pengeluaran)", Nilai: withdrawTabungan },
     { Ringkasan: "Diambil dari Dana Darurat (bukan pemasukan/pengeluaran)", Nilai: withdrawDana },
+    { Ringkasan: "Diambil dari Tabungan Orang Have (bukan pemasukan/pengeluaran)", Nilai: withdrawOh },
     { Ringkasan: "Hutang/Piutang Uang Keluar (tidak dihitung)", Nilai: debtOut },
     { Ringkasan: "Hutang/Piutang Uang Masuk (tidak dihitung)", Nilai: debtIn },
     { Ringkasan: "Jumlah Transaksi", Nilai: filteredTransactions.length },

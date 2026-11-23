@@ -1,6 +1,6 @@
 // "carryover" = sisa uang akhir bulan yang dibawa ke bulan berikutnya.
 // Bukan pemasukan dan bukan pengeluaran.
-// "withdrawal" = pengambilan uang dari Tabungan / Dana Darurat ke uang sehari-hari.
+// "withdrawal" = pengambilan uang dari Tabungan / Dana Darurat / Tabungan Orang Have ke uang sehari-hari.
 // Bukan pemasukan dan bukan pengeluaran.
 export type TransactionType = "income" | "expense" | "carryover" | "withdrawal";
 
@@ -20,7 +20,7 @@ export type ExpenseCategory =
 export type IncomeCategory = "audit" | "hutang";
 
 // Sumber pengambilan (disimpan di field category pada type "withdrawal")
-export type WithdrawalCategory = "tabungan" | "dana_darurat";
+export type WithdrawalCategory = "tabungan" | "dana_darurat" | "tabungan_oh";
 
 export type TransactionCategory = ExpenseCategory | IncomeCategory;
 
@@ -52,6 +52,7 @@ export const EXPENSE_CATEGORIES: { value: ExpenseCategory; label: string }[] = [
 export const WITHDRAWAL_CATEGORIES: { value: WithdrawalCategory; label: string }[] = [
   { value: "tabungan", label: "Tabungan" },
   { value: "dana_darurat", label: "Dana Darurat" },
+  { value: "tabungan_oh", label: "Tabungan Orang Have" },
 ];
 
 // value "" = pemasukan biasa (category null)

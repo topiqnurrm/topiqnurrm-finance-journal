@@ -45,7 +45,11 @@ export default function FinanceForm({ editingTransaction, onCancelEdit, onSavedE
       setType(effType);
       setCategory(effType === "expense" && cat ? (cat as ExpenseCategory) : "kehidupan");
       setIncomeCategory(effType === "income" && cat ? (cat as IncomeCategory) : "");
-      setWithdrawCategory(effType === "withdrawal" && cat === "dana_darurat" ? "dana_darurat" : "tabungan");
+      setWithdrawCategory(
+        effType === "withdrawal" && WITHDRAWAL_CATEGORIES.some((c) => c.value === cat)
+          ? (cat as WithdrawalCategory)
+          : "tabungan"
+      );
       setAmount(String(editingTransaction.amount));
       setNote(editingTransaction.note || "");
       setDate(editingTransaction.date);

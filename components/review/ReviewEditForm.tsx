@@ -39,7 +39,9 @@ function TransactionEdit({ item, onDone }: { item: TransactionReviewItem; onDone
     item.txType === "income" && item.category ? (item.category as IncomeCategory) : ""
   );
   const [withdrawCategory, setWithdrawCategory] = useState<WithdrawalCategory>(
-    item.txType === "withdrawal" && item.category === "dana_darurat" ? "dana_darurat" : "tabungan"
+    item.txType === "withdrawal" && WITHDRAWAL_CATEGORIES.some((c) => c.value === item.category)
+      ? (item.category as WithdrawalCategory)
+      : "tabungan"
   );
   const [amount, setAmount] = useState(String(item.amount));
   const [note, setNote] = useState(item.note);

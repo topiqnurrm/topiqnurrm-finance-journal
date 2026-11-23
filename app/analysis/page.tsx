@@ -199,7 +199,7 @@ export default function AnalysisPage() {
             label="Total Tabungan Orang Have"
             value={formatRupiah(totalTabunganOh)}
             tone="text-indigo-400"
-            hint="Terkumpul (tidak bisa diambil lewat sini)"
+            hint="Setoran − pengambilan"
           />
         </div>
       </Section>
@@ -208,7 +208,7 @@ export default function AnalysisPage() {
       <Section title="Pengambilan & Sisa Budget">
         <div className="grid grid-cols-1 gap-3">
           <Stat
-            label="Diambil dari Tabungan / Dana Darurat"
+            label="Diambil dari Tabungan / Dana Darurat / Orang Have"
             value={formatRupiah(withdrawal)}
             tone="text-amber-400"
             hint="Menambah uang bulan ini, bukan pemasukan"
@@ -217,7 +217,7 @@ export default function AnalysisPage() {
             label="Sisa (Semua Pemasukan − Total Budget)"
             value={formatRupiah(sisaBudget)}
             tone={sisaBudget < 0 ? "text-red-400" : "text-green-400"}
-            hint={`Pemasukan ${formatRupiah(totalIncome)} + sisa bulan lalu ${formatRupiah(carryIn)} + ambil tabungan/dana darurat ${formatRupiah(withdrawal)} = ${formatRupiah(totalDana)}; dikurangi total budget ${formatRupiah(totalBudgetAllocated)}`}
+            hint={`Pemasukan ${formatRupiah(totalIncome)} + sisa bulan lalu ${formatRupiah(carryIn)} + ambil tabungan/dana darurat/orang have ${formatRupiah(withdrawal)} = ${formatRupiah(totalDana)}; dikurangi total budget ${formatRupiah(totalBudgetAllocated)}`}
           />
         </div>
       </Section>
