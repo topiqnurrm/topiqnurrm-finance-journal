@@ -18,7 +18,7 @@ export const OH_GRACE_DAY = 5;
 export const OH_KAS_PER_PERSON = 10000;
 
 // Rekening tujuan transfer, tampil di halaman. Ganti teks ini kalau sudah ada.
-export const OH_ACCOUNT_INFO = "Belum ditentukan";
+export const OH_ACCOUNT_INFO = "1630013947380 (Mandiri a.n. Nadya Primaditya Maharani)";
 
 // Folder bukti di dalam proyek. Struktur:
 //   public/tabungan-bersama/<OH_PROOF_VERSION>/nabung/    -> bukti setoran
