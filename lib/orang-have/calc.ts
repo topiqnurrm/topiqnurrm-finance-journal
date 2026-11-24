@@ -145,7 +145,13 @@ export function buildHistory(
       key: `e:${e.id ?? i}`,
       date: e.date,
       kind: isAudit(e) ? "audit" : "kas",
-      title: isAudit(e) ? (e.direction === "in" ? "Audit: uang lebih" : "Audit: uang kurang") : "Pengeluaran kas",
+      title: isAudit(e)
+        ? e.amount === 0
+          ? "Audit: saldo cocok (selisih 0)"
+          : e.direction === "in"
+          ? "Audit: uang lebih"
+          : "Audit: uang kurang"
+        : "Pengeluaran kas",
       detail: e.note || "-",
       delta: kasEntryDelta(e),
       proof: e.proof || "",

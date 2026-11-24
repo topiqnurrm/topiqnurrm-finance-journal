@@ -66,8 +66,10 @@ export default function OhKas({ isOwner, members, payments, expenses, loans, add
   async function handleSave(ev: React.FormEvent) {
     ev.preventDefault();
     const a = parseInt(amount, 10);
-    if (!(a > 0) || !note.trim()) {
-      window.alert(entryType === "audit" ? "Isi jumlah selisih dan keterangan audit." : "Isi jumlah dan keterangan pengeluaran.");
+    // Audit boleh selisih 0 (saldo cocok); pengeluaran tetap harus lebih dari 0
+    const amountOk = entryType === "audit" ? Number.isFinite(a) && a >= 0 : a > 0;
+    if (!amountOk || !note.trim()) {
+      window.alert(entryType === "audit" ? "Isi jumlah selisih (boleh 0) dan keterangan audit." : "Isi jumlah dan keterangan pengeluaran.");
       return;
     }
     if (!isValidProofName(proof.trim())) {
@@ -76,7 +78,9 @@ export default function OhKas({ isOwner, members, payments, expenses, loans, add
     }
     if (!window.confirm(
         entryType === "audit"
-          ? `Simpan audit: uang ${direction === "in" ? "LEBIH (menambah kas)" : "KURANG (mengurangi kas)"} ${formatRupiah(a)}?`
+          ? a === 0
+            ? "Simpan audit dengan selisih Rp0 (saldo cocok, kas tidak berubah)?"
+            : `Simpan audit: uang ${direction === "in" ? "LEBIH (menambah kas)" : "KURANG (mengurangi kas)"} ${formatRupiah(a)}?`
           : editing
           ? "Simpan perubahan pengeluaran kas ini?"
           : "Simpan pengeluaran kas ini?"
@@ -106,8 +110,8 @@ export default function OhKas({ isOwner, members, payments, expenses, loans, add
   const bankNum = parseInt(bankBalance, 10);
   const bankDiff = Number.isFinite(bankNum) ? bankNum - pool.available : null;
   function useBankDiff() {
-    if (bankDiff === null || bankDiff === 0) return;
-    setDirection(bankDiff > 0 ? "in" : "out");
+    if (bankDiff === null) return;
+    if (bankDiff !== 0) setDirection(bankDiff > 0 ? "in" : "out");
     setAmount(String(Math.abs(bankDiff)));
   }
 
@@ -224,13 +228,13 @@ export default function OhKas({ isOwner, members, payments, expenses, loans, add
                       {bankDiff !== null &&
                         ` · selisih ${bankDiff > 0 ? "+" : bankDiff < 0 ? "−" : ""}${formatRupiah(Math.abs(bankDiff))}`}
                     </p>
-                    {bankDiff !== null && bankDiff !== 0 && (
+                    {bankDiff !== null && (
                       <button
                         type="button"
                         onClick={useBankDiff}
                         className="rounded-md bg-neutral-700 px-3 py-1 text-xs text-white"
                       >
-                        Pakai selisih ini
+                        {bankDiff === 0 ? "Pakai selisih 0 (saldo cocok)" : "Pakai selisih ini"}
                       </button>
                     )}
                   </div>
@@ -315,9 +319,11 @@ export default function OhKas({ isOwner, members, payments, expenses, loans, add
                 </div>
               </div>
               <p
-                className={`shrink-0 text-sm font-semibold ${kasEntryDelta(e) >= 0 ? "text-green-500" : "text-red-500"}`}
+                className={`shrink-0 text-sm font-semibold ${
+                  e.amount === 0 ? "text-neutral-400" : kasEntryDelta(e) >= 0 ? "text-green-500" : "text-red-500"
+                }`}
               >
-                {kasEntryDelta(e) >= 0 ? "+" : "−"}
+                {e.amount === 0 ? "" : kasEntryDelta(e) >= 0 ? "+" : "−"}
                 {formatRupiah(e.amount)}
               </p>
             </div>
