@@ -15,6 +15,7 @@ import { JournalEntry, JournalCategory } from "@/lib/types/journal";
 import {
   DateWindow,
   LoadedArchive,
+  EMPTY_ARCHIVE,
   attachJournalCategoryIds,
   clampToLive,
   inWindow,
@@ -131,7 +132,8 @@ export function useReviewData(opts: { showChecked: boolean; from: string; to: st
       })
       .catch((err) => {
         console.error(err);
-        if (!cancelled) setArchive({ transactions: [], journals: [], auditDate: null });
+        // Arsip gagal dimuat: baca semuanya dari Firebase
+        if (!cancelled) setArchive(EMPTY_ARCHIVE);
       });
     return () => {
       cancelled = true;
