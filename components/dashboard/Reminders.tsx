@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useReminders } from "@/lib/hooks/useReminders";
+import { isArchivedId } from "@/lib/archive";
 import { Reminder } from "@/lib/types/reminder";
 import { getLocalDateStr } from "@/lib/utils/date";
 
@@ -178,6 +179,7 @@ export default function Reminders() {
     const days = daysUntil(r.dueDate, today);
     const level = getLevel(days, r.done);
     const style = LEVEL_STYLE[level];
+    const archived = isArchivedId(r.id); // dari arsip di kode: tidak bisa diubah dari aplikasi
 
     return (
       <div
@@ -185,7 +187,7 @@ export default function Reminders() {
         className={`flex items-start justify-between gap-3 rounded-md border p-3 ${style.card}`}
       >
         <div className="flex min-w-0 items-start gap-3">
-          {isOwner && (
+          {isOwner && !archived && (
             <input
               type="checkbox"
               checked={r.done}
@@ -202,12 +204,17 @@ export default function Reminders() {
             >
               {r.important && <span className="mr-1 text-amber-400">★</span>}
               {r.title}
+              {archived && (
+                <span className="ml-2 rounded bg-neutral-800 px-1.5 py-0.5 text-[10px] font-normal text-neutral-500">
+                  Arsip
+                </span>
+              )}
             </p>
             <p className="break-words text-xs text-neutral-500">
               {formatDate(r.dueDate)}
               {r.note && ` · ${r.note}`}
             </p>
-            {isOwner && (
+            {isOwner && !archived && (
               <div className="mt-1 flex gap-3">
                 <button
                   onClick={() => startEdit(r)}

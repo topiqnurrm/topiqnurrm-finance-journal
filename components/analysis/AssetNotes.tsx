@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useAssets } from "@/lib/hooks/useAssets";
+import { isArchivedId } from "@/lib/archive";
 import { Asset } from "@/lib/types/asset";
 import { formatRupiah } from "@/lib/utils/currency";
 import { getLocalDateStr } from "@/lib/utils/date";
@@ -122,7 +123,9 @@ export default function AssetNotes({ isOwner }: Props) {
           </div>
 
           <div className="space-y-2">
-            {sorted.map((a) => (
+            {sorted.map((a) => {
+              const archived = isArchivedId(a.id);
+              return (
               <div
                 key={a.id}
                 className={`flex items-center justify-between gap-3 rounded-md border p-3 ${
@@ -130,7 +133,12 @@ export default function AssetNotes({ isOwner }: Props) {
                 }`}
               >
                 <div className="min-w-0">
-                  <p className="break-words text-sm font-medium text-white">{a.name}</p>
+                  <p className="break-words text-sm font-medium text-white">
+                    {a.name}
+                    {archived && (
+                      <span className="ml-2 rounded bg-neutral-800 px-1.5 py-0.5 text-[10px] text-neutral-500">Arsip</span>
+                    )}
+                  </p>
                   <p className="break-words text-xs text-neutral-500">
                     {a.date}
                     {a.value != null && ` · ${formatRupiah(a.value)}`}
@@ -141,7 +149,7 @@ export default function AssetNotes({ isOwner }: Props) {
                   <span className="text-sm font-semibold text-amber-400">
                     {+a.quantity.toFixed(4)} {a.unit}
                   </span>
-                  {isOwner && (
+                  {isOwner && !archived && (
                     <>
                       <button
                         onClick={() => startEdit(a)}
@@ -159,7 +167,8 @@ export default function AssetNotes({ isOwner }: Props) {
                   )}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </>
       )}

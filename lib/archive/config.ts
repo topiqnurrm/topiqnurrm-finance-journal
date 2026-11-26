@@ -15,7 +15,7 @@
 //
 // Mau membaca bulan tertentu dari Firebase lagi? Turunkan LIVE_FROM (file arsip tidak perlu dihapus).
 // Syarat: data bulan itu masih ada di Firebase.
-export const LIVE_FROM = "2026-11";
+export const LIVE_FROM = "2026-03";
 
 // Bulan paling awal yang punya file arsip. Jarang perlu diubah.
-export const ARCHIVE_FIRST = "2026-08";
+export const ARCHIVE_FIRST = "2026-03";

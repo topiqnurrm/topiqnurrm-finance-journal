@@ -1,6 +1,11 @@
 import * as XLSX from "xlsx";
-import { Transaction, isCarryover, CARRYOVER_LABEL } from "@/lib/types/finance";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase/config";
+import { Budget, Transaction, isCarryover, CARRYOVER_LABEL } from "@/lib/types/finance";
 import { JournalEntry } from "@/lib/types/journal";
+import { Asset } from "@/lib/types/asset";
+import { Reminder } from "@/lib/types/reminder";
+import { EMPTY_ARCHIVE, loadArchive } from "@/lib/archive";
 
 const CATEGORY_LABELS: Record<string, string> = {
   kehidupan: "Kehidupan",
@@ -28,7 +33,81 @@ function inRange(date: string, from?: string, to?: string) {
   return true;
 }
 
-export function exportToExcel({ transactions, journals, from, to }: ExportOptions) {
+const BUDGET_KEYS = [
+  ["kehidupan", "Kehidupan"],
+  ["mendadak", "Mendadak"],
+  ["tabungan", "Tabungan"],
+  ["foya_foya", "Foya-foya"],
+  ["grooming", "Grooming"],
+  ["dana_darurat", "Dana Darurat"],
+  ["tabungan_oh", "Tabungan Orang Have"],
+  ["audit", "Audit"],
+] as const;
+
+// Aset, pengingat, dan budget: gabungan Firebase + arsip (arsip hanya dipakai kalau belum ada padanannya di Firebase).
+// Firebase dibaca penuh (koleksinya kecil) supaya data lama yang belum diarsipkan juga ikut terekspor.
+async function loadExtras() {
+  const [assetSnap, reminderSnap, budgetSnap, archive] = await Promise.all([
+    getDocs(collection(db, "assets")),
+    getDocs(collection(db, "reminders")),
+    getDocs(collection(db, "budgets")),
+    loadArchive().catch(() => EMPTY_ARCHIVE),
+  ]);
+
+  const liveAssets = assetSnap.docs.map((d) => d.data() as Asset);
+  const assetSig = (a: Asset) => `${a.date}|${a.name}|${a.quantity}|${a.unit}|${a.value ?? ""}|${a.note ?? ""}`;
+  const seenAssets = new Set(liveAssets.map(assetSig));
+  const assets = [...liveAssets, ...archive.assets.filter((a) => !seenAssets.has(assetSig(a)))];
+
+  const liveReminders = reminderSnap.docs.map((d) => d.data() as Reminder);
+  const reminderSig = (r: Reminder) => `${r.dueDate}|${r.title}|${r.note ?? ""}`;
+  const seenReminders = new Set(liveReminders.map(reminderSig));
+  const reminders = [...liveReminders, ...archive.reminders.filter((r) => !seenReminders.has(reminderSig(r)))];
+
+  const budgets = new Map<string, Omit<Budget, "id">>();
+  for (const [month, b] of Object.entries(archive.budgets)) if (b) budgets.set(month, b);
+  for (const d of budgetSnap.docs) budgets.set(d.id, d.data() as Omit<Budget, "id">); // Firebase menang
+
+  return { assets, reminders, budgets };
+}
+
+export async function exportToExcel({ transactions, journals, from, to }: ExportOptions) {
+  const extras = await loadExtras();
+  const fromMonth = from?.slice(0, 7);
+  const toMonth = to?.slice(0, 7);
+
+  const assetRows = extras.assets
+    .filter((a) => inRange(a.date, from, to))
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map((a) => ({
+      Tanggal: a.date,
+      Nama: a.name,
+      Jumlah: a.quantity,
+      Satuan: a.unit,
+      Nilai: a.value ?? "",
+      Catatan: a.note || "",
+    }));
+
+  const reminderRows = extras.reminders
+    .filter((r) => inRange(r.dueDate, from, to))
+    .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
+    .map((r) => ({
+      "Jatuh Tempo": r.dueDate,
+      Judul: r.title,
+      Catatan: r.note || "",
+      Penting: r.important ? "Ya" : "Tidak",
+      Selesai: r.done ? "Ya" : "Tidak",
+    }));
+
+  const budgetRows = Array.from(extras.budgets.entries())
+    .filter(([m]) => (!fromMonth || m >= fromMonth) && (!toMonth || m <= toMonth))
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([m, b]) => {
+      const row: Record<string, string | number> = { Bulan: m };
+      for (const [key, label] of BUDGET_KEYS) row[label] = (b as Record<string, number | undefined>)[key] ?? "";
+      return row;
+    });
+
   const filteredTransactions = transactions
     .filter((t) => inRange(t.date, from, to))
     .sort((a, b) => a.date.localeCompare(b.date));
@@ -101,6 +180,9 @@ export function exportToExcel({ transactions, journals, from, to }: ExportOption
     { Ringkasan: "Hutang/Piutang Uang Masuk (tidak dihitung)", Nilai: debtIn },
     { Ringkasan: "Jumlah Transaksi", Nilai: filteredTransactions.length },
     { Ringkasan: "Jumlah Jurnal", Nilai: filteredJournals.length },
+    { Ringkasan: "Jumlah Aset", Nilai: assetRows.length },
+    { Ringkasan: "Jumlah Pengingat", Nilai: reminderRows.length },
+    { Ringkasan: "Jumlah Budget (bulan)", Nilai: budgetRows.length },
   ];
 
   const wb = XLSX.utils.book_new();
@@ -117,6 +199,23 @@ export function exportToExcel({ transactions, journals, from, to }: ExportOption
     journalRows.length > 0 ? journalRows : [{ Tanggal: "", Kategori: "", Isi: "Tidak ada data" }]
   );
   XLSX.utils.book_append_sheet(wb, journalSheet, "Jurnal");
+
+  const assetSheet = XLSX.utils.json_to_sheet(
+    assetRows.length > 0 ? assetRows : [{ Tanggal: "", Nama: "", Jumlah: "", Satuan: "", Nilai: "", Catatan: "Tidak ada data" }]
+  );
+  XLSX.utils.book_append_sheet(wb, assetSheet, "Aset");
+
+  const reminderSheet = XLSX.utils.json_to_sheet(
+    reminderRows.length > 0
+      ? reminderRows
+      : [{ "Jatuh Tempo": "", Judul: "", Catatan: "Tidak ada data", Penting: "", Selesai: "" }]
+  );
+  XLSX.utils.book_append_sheet(wb, reminderSheet, "Pengingat");
+
+  const budgetSheet = XLSX.utils.json_to_sheet(
+    budgetRows.length > 0 ? budgetRows : [{ Bulan: "Tidak ada data" }]
+  );
+  XLSX.utils.book_append_sheet(wb, budgetSheet, "Budget");
 
   const rangeLabel = from || to ? `${from || "awal"}_sd_${to || "akhir"}` : "semua-data";
   const filename = `keuangan-jurnal_${rangeLabel}.xlsx`;

@@ -48,6 +48,7 @@ const data: ArchiveMonth = {
     ["2026-09-26","expense","hutang",1000000,"balekke uang bapak 1jt"],
     ["2026-09-26","expense","grooming",200000,"tritmen ultah bulanan oktober"],
     ["2026-09-26","expense","hutang",500000,"bayar Wisuda 500k "],
+    ["2026-09-26","expense","mendadak",500000,"bayar Wisuda 500k "],
     ["2026-09-28","expense","kehidupan",76000,"telur 24, roti tawar 11, susu 9, sarden 21, indomi 9"],
     ["2026-09-29","expense","mendadak",210000,"bpjs agus - sept 2026"],
     ["2026-09-30","carryover",null,5687625,"sisa uang untuk bulan depan "],

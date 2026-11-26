@@ -10,6 +10,7 @@ import { formatRupiah } from "@/lib/utils/currency";
 import BackButton from "@/components/ui/BackButton";
 import AssetNotes from "@/components/analysis/AssetNotes";
 import ActualMoneyChart from "@/components/analysis/ActualMoneyChart";
+import { EXPENSE_CATEGORIES, isCarryover } from "@/lib/types/finance";
 import { calcDebtBalance, calcMonthTotals, calcSavingsBalance } from "@/lib/utils/finance";
 
 // Pembungkus satu kategori: judul + isi
@@ -85,6 +86,40 @@ export default function AnalysisPage() {
     sisaUang,
   } = calcMonthTotals(transactions, monthId);
 
+  // Pengeluaran bersih = pengeluaran dikurangi uang yang diambil dari tabungan / dana darurat / orang have
+  // (uang pengambilan itulah yang dipakai membayar sebagian pengeluaran)
+  const netExpense = totalExpense - withdrawal;
+
+  // Semua waktu: jumlahkan tiap bulan dengan aturan hitung yang sama (hutang & sisa bulan lalu tidak ikut)
+  const allStats = useMemo(() => {
+    const months = Array.from(new Set(transactions.map((t) => t.date.slice(0, 7))));
+    let income = 0;
+    let expense = 0;
+    let withdrawal = 0;
+    for (const m of months) {
+      const r = calcMonthTotals(transactions, m);
+      income += r.income;
+      expense += r.expense;
+      withdrawal += r.withdrawal;
+    }
+    // Pengeluaran per kategori (hutang & sisa bulan lalu tidak ikut). Pemasukan audit mengurangi kategori audit.
+    const byCat: Record<string, number> = {};
+    for (const t of transactions) {
+      if (t.category === "hutang" || isCarryover(t)) continue;
+      if (t.type === "expense") {
+        const k = t.category ?? "lainnya";
+        byCat[k] = (byCat[k] ?? 0) + t.amount;
+      } else if (t.type === "income" && t.category === "audit") {
+        byCat.audit = (byCat.audit ?? 0) - t.amount;
+      }
+    }
+    const usage = Object.entries(byCat).map(([k, amount]) => ({
+      label: EXPENSE_CATEGORIES.find((c) => c.value === k)?.label ?? "Lainnya",
+      amount,
+    }));
+    return { income, gross: expense, withdrawal, net: Math.max(0, expense - withdrawal), usage };
+  }, [transactions]);
+
   const totalBudgetAllocated = budget
     ? (budget.kehidupan ?? 0) +
       (budget.mendadak ?? 0) +
@@ -159,16 +194,25 @@ export default function AnalysisPage() {
       <Section title="Bulan Ini" hint={formatMonthLabel(monthId)}>
         <div className="grid grid-cols-2 gap-3">
           <Stat label="Pemasukan" value={formatRupiah(totalIncome)} tone="text-green-400" />
-          <Stat label="Pengeluaran" value={formatRupiah(totalExpense)} tone="text-red-400" />
+          <Stat
+            label="Pengeluaran (bersih)"
+            value={formatRupiah(netExpense)}
+            tone={netExpense > 0 ? "text-red-400" : "text-green-400"}
+            hint={
+              withdrawal !== 0
+                ? `${formatRupiah(totalExpense)} − diambil dari tabungan/dana darurat/orang have ${formatRupiah(withdrawal)}`
+                : undefined
+            }
+          />
           <Stat
             className="col-span-2"
             label="Sisa Uang Bulan Ini"
             value={formatRupiah(sisaUang)}
             tone={sisaUang < 0 ? "text-red-400" : "text-green-400"}
             hint={
-              carryIn !== 0 || carryOut !== 0 || withdrawal !== 0
-                ? "Pemasukan + sisa bulan lalu + ambil tabungan − pengeluaran − sisa dibawa"
-                : "Pemasukan − Pengeluaran"
+              carryIn !== 0 || carryOut !== 0
+                ? "Pemasukan + sisa bulan lalu − pengeluaran (bersih) − sisa dibawa"
+                : "Pemasukan − Pengeluaran (bersih)"
             }
           />
           <Stat
@@ -232,7 +276,14 @@ export default function AnalysisPage() {
         <BudgetForm key={monthId} monthId={monthId} initialBudget={budget} onSave={saveBudget} />
       )}
 
-      <MonthlyChart income={totalIncome} expense={totalExpense} />
+      <MonthlyChart
+        month={{ income: totalIncome, expense: Math.max(0, netExpense) }}
+        all={{ income: allStats.income, expense: allStats.net }}
+        allGross={allStats.gross}
+        allWithdrawal={allStats.withdrawal}
+        usage={allStats.usage}
+        monthLabel={formatMonthLabel(monthId)}
+      />
       <CategoryBreakdown budget={budget} transactions={monthlyTransactions} />
 
       {/* Catatan aset: tidak terikat bulan; hanya owner yang bisa menambah/ubah */}

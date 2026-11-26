@@ -6,6 +6,7 @@ import { formatRupiah } from "@/lib/utils/currency";
 import { getLocalDateStr } from "@/lib/utils/date";
 import { isValidProofName } from "@/lib/orang-have/calc";
 import OhProofLink from "./OhProofLink";
+import { isOhArchivedId } from "@/lib/orang-have/archive";
 import { ohProofDir } from "@/lib/orang-have/config";
 
 type Loan = OhLoan & { id: string };
@@ -144,11 +145,19 @@ export default function OhLoans({ isOwner, members, loans, addLoan, editLoan, re
 
   function renderLoan(l: Loan) {
     const isRepaid = !!l.repaidDate;
+    const archived = isOhArchivedId(l.id);
     return (
       <div key={l.id} className="space-y-1 border-t border-neutral-800 pt-2">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="break-words text-sm text-white">{l.borrower}</p>
+            <p className="break-words text-sm text-white">
+              {archived && (
+                <span className="mr-2 rounded border border-neutral-600 bg-neutral-800 px-1.5 py-0.5 text-[10px] text-neutral-300">
+                  Arsip
+                </span>
+              )}
+              {l.borrower}
+            </p>
             <p className="break-words text-xs text-neutral-500">
               Pinjam {l.date}
               {l.dueDate && ` · jatuh tempo ${l.dueDate}`}
@@ -169,7 +178,7 @@ export default function OhLoans({ isOwner, members, loans, addLoan, editLoan, re
           <OhProofLink proof={l.proof} kind="pinjaman" label="Bukti pinjaman" />
           {isRepaid && <OhProofLink proof={l.repaidProof} kind="lunas" label="Bukti lunas" />}
           {isRepaid && !l.repaidProof && <span className="text-xs text-amber-500">Belum ada bukti lunas</span>}
-          {isOwner && (
+          {isOwner && !archived && (
             <>
               <button onClick={() => startRepay(l)} className="text-xs text-neutral-500 hover:text-green-400">
                 {isRepaid ? "Ubah data lunas" : "Tandai lunas"}
@@ -188,7 +197,7 @@ export default function OhLoans({ isOwner, members, loans, addLoan, editLoan, re
             </>
           )}
         </div>
-        {isOwner && repayId === l.id && (
+        {isOwner && !archived && repayId === l.id && (
           <div className="space-y-2 rounded-md border border-neutral-800 p-3">
             <p className="text-xs text-neutral-400">{isRepaid ? "Ubah data pelunasan" : "Pelunasan pinjaman"}</p>
             <label className="block text-xs text-neutral-500">

@@ -7,6 +7,7 @@ import { getLocalDateStr } from "@/lib/utils/date";
 import { OH_PAYOUT_LABEL } from "@/lib/orang-have/config";
 import { isAudit, isValidProofName, kasEntryDelta, kasSummary, poolSummary } from "@/lib/orang-have/calc";
 import OhProofLink from "./OhProofLink";
+import { isOhArchivedId } from "@/lib/orang-have/archive";
 import { ohProofDir } from "@/lib/orang-have/config";
 
 type Expense = OhKasExpense & { id: string };
@@ -295,6 +296,11 @@ export default function OhKas({ isOwner, members, payments, expenses, loans, add
             <div key={e.id} className="flex items-start justify-between gap-3 border-t border-neutral-800 pt-2">
               <div className="min-w-0">
                 <p className="break-words text-sm text-white">
+                  {isOhArchivedId(e.id) && (
+                    <span className="mr-2 rounded border border-neutral-600 bg-neutral-800 px-1.5 py-0.5 text-[10px] text-neutral-300">
+                      Arsip
+                    </span>
+                  )}
                   {isAudit(e) && (
                     <span className="mr-2 rounded border border-purple-600 bg-purple-950 px-1.5 py-0.5 text-[10px] text-purple-300">
                       Audit
@@ -306,7 +312,7 @@ export default function OhKas({ isOwner, members, payments, expenses, loans, add
                 <div className="flex items-center gap-3">
                   <OhProofLink proof={e.proof} kind={isAudit(e) ? "audit" : "kas"} />
                   {!e.proof && <span className="text-xs text-amber-500">Belum ada bukti</span>}
-                  {isOwner && (
+                  {isOwner && !isOhArchivedId(e.id) && (
                     <>
                       <button onClick={() => startEdit(e)} className="text-xs text-neutral-500 hover:text-blue-400">
                         Edit

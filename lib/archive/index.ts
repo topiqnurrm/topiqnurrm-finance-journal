@@ -1,7 +1,9 @@
 import { Transaction } from "@/lib/types/finance";
 import { JournalEntry, JournalCategory } from "@/lib/types/journal";
+import { Asset } from "@/lib/types/asset";
+import { Reminder } from "@/lib/types/reminder";
 import { LIVE_FROM, ARCHIVE_FIRST } from "./config";
-import type { ArchiveMonth } from "./types";
+import type { ArchiveBudget, ArchiveMonth } from "./types";
 
 // Semua pengaturan ada di lib/archive/config.ts (LIVE_FROM). File ini tidak perlu diubah.
 
@@ -84,6 +86,29 @@ export interface LoadedArchive {
   transactions: (Transaction & { id: string })[];
   journals: ArchivedJournal[];
   auditDate: string | null; // transaksi berkategori "audit" terbaru di arsip
+  assets: (Asset & { id: string })[];
+  reminders: (Reminder & { id: string })[];
+  // Budget per bulan (YYYY-MM). Bulan yang tidak ada di sini dibaca dari Firebase. null = memang tidak ada budget.
+  budgets: Record<string, ArchiveBudget | null>;
+  // Aset & pengingat dibaca dari Firebase mulai tanggal ini ("" = semuanya dari Firebase).
+  // Biasanya sama dengan LIVE_START, tapi mundur ke bulan pertama yang file arsipnya BELUM memuat aset/pengingat,
+  // supaya data aset/pengingat tidak hilang selama migrasi.
+  extrasLiveStart: string;
+}
+
+// Dipakai kalau arsip gagal dimuat: baca semuanya dari Firebase, jangan menyembunyikan data
+export const EMPTY_ARCHIVE: LoadedArchive = {
+  transactions: [],
+  journals: [],
+  auditDate: null,
+  assets: [],
+  reminders: [],
+  budgets: {},
+  extrasLiveStart: "",
+};
+
+export function extrasLockedMessage(before: string) {
+  return `Data aset / pengingat sebelum ${before} diambil dari arsip di kode dan tidak bisa ditambah, diubah, atau dihapus dari aplikasi. Pilih tanggal ${before} atau setelahnya.`;
 }
 
 let archivePromise: Promise<LoadedArchive> | null = null;
@@ -117,6 +142,17 @@ export function loadArchive(): Promise<LoadedArchive> {
           `Angka di aplikasi belum lengkap sebelum itu diperbaiki.`
       );
     }
+
+    // Aset & pengingat: hanya bulan-bulan awal yang SUDAH dimigrasi (punya "as" dan "rm") yang dibaca dari arsip.
+    // Mulai dari bulan pertama yang belum dimigrasi, aset/pengingat tetap dibaca dari Firebase.
+    const firstUnmigrated = loaded.findIndex((x, i) => !x.as || !x.rm || missing.includes(months[i]));
+    const migrated = firstUnmigrated === -1 ? loaded : loaded.slice(0, firstUnmigrated);
+    const extrasLiveStart = firstUnmigrated === -1 ? LIVE_START : `${months[firstUnmigrated]}-01`;
+
+    const budgets: Record<string, ArchiveBudget | null> = {};
+    loaded.forEach((x, i) => {
+      if (x.bg !== undefined && !missing.includes(months[i])) budgets[months[i]] = x.bg;
+    });
 
     // Hanya baris yang benar-benar masuk rentang arsip (jaga-jaga kalau file bulan terlalu "maju")
     const txRows = loaded.flatMap((x) => x.tx).filter((r) => r[0] <= ARCHIVE_END);
@@ -163,12 +199,47 @@ export function loadArchive(): Promise<LoadedArchive> {
       }))
       .sort((a, b) => b.createdAt - a.createdAt);
 
+    const asRows = migrated.flatMap((x) => x.as ?? []);
+    const asTimes = synth(asRows);
+    const assets = asRows
+      .map(
+        ([date, name, quantity, unit, value, note], i) =>
+          ({
+            id: `${ARCHIVE_ID_PREFIX}as-${i}`,
+            name,
+            quantity,
+            unit,
+            value,
+            note,
+            date,
+            createdAt: asTimes[i],
+          }) as Asset & { id: string }
+      )
+      .sort((a, b) => b.createdAt - a.createdAt);
+
+    const rmRows = migrated.flatMap((x) => x.rm ?? []);
+    const rmTimes = synth(rmRows);
+    const reminders = rmRows
+      .map(
+        ([dueDate, title, note, important, done], i) =>
+          ({
+            id: `${ARCHIVE_ID_PREFIX}rm-${i}`,
+            title,
+            dueDate,
+            note,
+            important,
+            done,
+            createdAt: rmTimes[i],
+          }) as Reminder & { id: string }
+      )
+      .sort((a, b) => b.createdAt - a.createdAt);
+
     let auditDate: string | null = null;
     for (const r of txRows) {
       if (r[2] === "audit" && (!auditDate || r[0] > auditDate)) auditDate = r[0];
     }
 
-    return { transactions, journals, auditDate };
+    return { transactions, journals, auditDate, assets, reminders, budgets, extrasLiveStart };
   })();
 
   return archivePromise;

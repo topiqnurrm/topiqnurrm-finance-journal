@@ -15,6 +15,7 @@ import {
   periodMonths,
 } from "@/lib/orang-have/calc";
 import OhProofLink from "./OhProofLink";
+import { isOhArchivedId } from "@/lib/orang-have/archive";
 import { ohProofDir } from "@/lib/orang-have/config";
 
 type Member = OhMember & { id: string };
@@ -184,6 +185,11 @@ export default function OhPayments({ isOwner, members, payments, addPayment, edi
                   records.map((p) => (
                     <div key={p.id} className="space-y-0.5 border-t border-neutral-800 pt-2">
                       <p className="break-words text-sm text-white">
+                        {isOhArchivedId(p.id) && (
+                          <span className="mr-2 rounded border border-neutral-600 bg-neutral-800 px-1.5 py-0.5 text-[10px] text-neutral-300">
+                            Arsip
+                          </span>
+                        )}
                         Tabungan {formatRupiah(p.savings)} · Kas {formatRupiah(p.kas)}
                       </p>
                       <p className="break-words text-xs text-neutral-500">
@@ -192,7 +198,7 @@ export default function OhPayments({ isOwner, members, payments, addPayment, edi
                       </p>
                       <div className="flex items-center gap-3">
                         <OhProofLink proof={p.proof} kind="nabung" />
-                        {isOwner && (
+                        {isOwner && !isOhArchivedId(p.id) && (
                           <>
                             <button onClick={() => startEdit(p)} className="text-xs text-neutral-500 hover:text-blue-400">
                               Edit
