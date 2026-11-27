@@ -1,6 +1,7 @@
-// Arsip 2026-08 (read-only). Transaksi 9, jurnal 2.
+// Arsip 2026-08 (read-only). Transaksi 9, jurnal 2, aset 2, pengingat 0, budget ada.
 // Dibuat otomatis oleh scripts/archive-month.mjs dari export Excel. JANGAN diedit manual.
 // [tanggal, jenis, kategori, jumlah, catatan] / [tanggal, nama kategori, isi]
+// as: [tanggal, nama, jumlah, satuan, nilai, catatan] / rm: [jatuh tempo, judul, catatan, penting, selesai] / bg: budget bulan ini
 // Urutan: tanggal naik, dalam 1 hari terbaru dulu (sama seperti export).
 import type { ArchiveMonth } from "../types";
 
@@ -20,6 +21,13 @@ const data: ArchiveMonth = {
     ["2026-08-31","cyber","download utm, download ubuntu 3.5 gb, dan kali linux 3.5 gb, windows otomatis uis ono"],
     ["2026-08-31","religi","baca alfatihah sampai halaman 5 (al baqarah, ayat 25) di https://quran.com/id/sapi-betina?startingVerse=26,, shalat duha"],
   ],
+  as: [
+    ["2026-03-13","jawa gold",1,"gram",2860000,"jawa gold, toko emas jawa yogya, jl. pangeran diponegoro. harga jual : ?"],
+    ["2026-03-26","Small Gold Bar, EMASKU",1,"gram",2570000,"beli di jogja city mall, hartadinata, harga jual : ?"],
+  ],
+  rm: [
+  ],
+  bg: {"kehidupan":0,"mendadak":0,"tabungan":0,"foya_foya":0,"grooming":0,"dana_darurat":0,"audit":0},
 };
 
 export default data;

@@ -102,7 +102,7 @@ export default function AnalysisPage() {
       expense += r.expense;
       withdrawal += r.withdrawal;
     }
-    // Pengeluaran per kategori (hutang & sisa bulan lalu tidak ikut). Pemasukan audit mengurangi kategori audit.
+    // Pengeluaran per kategori (hutang & sisa bulan lalu tidak ikut). Pemasukan audit mengurangi kategori audit, pengambilan mengurangi kategori sumbernya.
     const byCat: Record<string, number> = {};
     for (const t of transactions) {
       if (t.category === "hutang" || isCarryover(t)) continue;
@@ -111,13 +111,16 @@ export default function AnalysisPage() {
         byCat[k] = (byCat[k] ?? 0) + t.amount;
       } else if (t.type === "income" && t.category === "audit") {
         byCat.audit = (byCat.audit ?? 0) - t.amount;
+      } else if (t.type === "withdrawal" && t.category) {
+        // Pengambilan langsung mengurangi kategori sumbernya (tabungan / dana_darurat / tabungan_oh)
+        byCat[t.category] = (byCat[t.category] ?? 0) - t.amount;
       }
     }
     const usage = Object.entries(byCat).map(([k, amount]) => ({
       label: EXPENSE_CATEGORIES.find((c) => c.value === k)?.label ?? "Lainnya",
       amount,
     }));
-    return { income, gross: expense, withdrawal, net: Math.max(0, expense - withdrawal), usage };
+    return { income, net: Math.max(0, expense - withdrawal), usage };
   }, [transactions]);
 
   const totalBudgetAllocated = budget
@@ -276,15 +279,14 @@ export default function AnalysisPage() {
         <BudgetForm key={monthId} monthId={monthId} initialBudget={budget} onSave={saveBudget} />
       )}
 
+      <CategoryBreakdown budget={budget} transactions={monthlyTransactions} />
+
       <MonthlyChart
         month={{ income: totalIncome, expense: Math.max(0, netExpense) }}
         all={{ income: allStats.income, expense: allStats.net }}
-        allGross={allStats.gross}
-        allWithdrawal={allStats.withdrawal}
         usage={allStats.usage}
         monthLabel={formatMonthLabel(monthId)}
       />
-      <CategoryBreakdown budget={budget} transactions={monthlyTransactions} />
 
       {/* Catatan aset: tidak terikat bulan; hanya owner yang bisa menambah/ubah */}
       <AssetNotes isOwner={isOwner} />

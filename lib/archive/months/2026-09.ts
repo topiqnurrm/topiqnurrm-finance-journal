@@ -1,6 +1,7 @@
-// Arsip 2026-09 (read-only). Transaksi 47, jurnal 71.
+// Arsip 2026-09 (read-only). Transaksi 47, jurnal 71, aset 0, pengingat 0, budget ada.
 // Dibuat otomatis oleh scripts/archive-month.mjs dari export Excel. JANGAN diedit manual.
 // [tanggal, jenis, kategori, jumlah, catatan] / [tanggal, nama kategori, isi]
+// as: [tanggal, nama, jumlah, satuan, nilai, catatan] / rm: [jatuh tempo, judul, catatan, penting, selesai] / bg: budget bulan ini
 // Urutan: tanggal naik, dalam 1 hari terbaru dulu (sama seperti export).
 import type { ArchiveMonth } from "../types";
 
@@ -128,6 +129,11 @@ const data: ArchiveMonth = {
     ["2026-09-30","cpns","tes twk (subtes 2. sejarah indonesia), hal 149-156, kunci 283-291.\n\n15 e gasih,"],
     ["2026-09-30","religi","tahajud, ngaji 119-143 albaqarah \"diturunkannya nabi muhammad, dijelaskannya kakbah yang dijelaskan nabi ibrahim kepada pengikutnya sebagai tempat berlindung dan beribadah - ismail dan ibrahim membangun pondasi kakbah, diturun turunkan sampai yakub, mereka akan menyembah tuhan dari ibrahim, ismail, ishaq - jangan mengikuti yahudi / nasrani, sigba terbaik milih allah\", DAY 4 alwaqiah latin, yasin 1-9, ayat kursi"],
   ],
+  as: [
+  ],
+  rm: [
+  ],
+  bg: {"kehidupan":0,"mendadak":0,"tabungan":0,"foya_foya":0,"grooming":0,"dana_darurat":0,"audit":0},
 };
 
 export default data;

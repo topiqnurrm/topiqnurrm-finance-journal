@@ -16,16 +16,14 @@ interface Totals {
 interface Props {
   month: Totals; // bulan yang dipilih
   all: Totals; // semua bulan
-  allGross: number; // pengeluaran kotor semua waktu (sebelum dikurangi pengambilan tabungan)
-  allWithdrawal: number; // total diambil dari tabungan / dana darurat / orang have
-  usage: UsageRow[]; // pengeluaran semua waktu per kategori
+  usage: UsageRow[]; // pengeluaran bersih semua waktu per kategori (sudah dikurangi pengambilan)
   monthLabel: string;
 }
 
 const pct = (part: number, whole: number) => (whole > 0 ? (part / whole) * 100 : 0);
 const fmtPct = (n: number) => `${n.toLocaleString("id-ID", { maximumFractionDigits: 1 })}%`;
 
-export default function MonthlyChart({ month, all, allGross, allWithdrawal, usage, monthLabel }: Props) {
+export default function MonthlyChart({ month, all, usage, monthLabel }: Props) {
   const [mode, setMode] = useState<"month" | "all">("month");
   const { income, expense } = mode === "month" ? month : all;
   const max = Math.max(income, expense, 1);
@@ -84,7 +82,8 @@ export default function MonthlyChart({ month, all, allGross, allWithdrawal, usag
         <div className="space-y-3 border-t border-neutral-800 pt-3">
           <p className="text-sm text-neutral-300">Uang dipakai untuk apa saja</p>
           <p className="text-xs text-neutral-500">
-            Persen kiri = bagian dari total pengeluaran. Persen kanan = bagian dari total pemasukan ({formatRupiah(income)}).
+            Sudah dikurangi uang yang diambil dari tabungan / dana darurat / Orang Have. Persen pertama = bagian dari total
+            pengeluaran, persen kedua = bagian dari total pemasukan ({formatRupiah(income)}).
           </p>
 
           {rows.length === 0 ? (
@@ -108,23 +107,19 @@ export default function MonthlyChart({ month, all, allGross, allWithdrawal, usag
 
           <div className="space-y-1 rounded-lg border border-neutral-800 p-3 text-xs text-neutral-400">
             <div className="flex justify-between gap-2">
-              <span>Total pengeluaran</span>
-              <span className="text-neutral-200">{formatRupiah(allGross)}</span>
+              <span>Total pemasukan</span>
+              <span className="text-green-400">{formatRupiah(income)}</span>
             </div>
             <div className="flex justify-between gap-2">
-              <span>Diambil dari tabungan / dana darurat / Orang Have</span>
-              <span className="text-green-400">− {formatRupiah(allWithdrawal)}</span>
-            </div>
-            <div className="flex justify-between gap-2 border-t border-neutral-800 pt-1">
-              <span>Pengeluaran bersih</span>
+              <span>Total pengeluaran</span>
               <span className="text-red-400">
                 {formatRupiah(all.expense)} ({fmtPct(pct(all.expense, income))} dari pemasukan)
               </span>
             </div>
-            <div className="flex justify-between gap-2">
+            <div className="flex justify-between gap-2 border-t border-neutral-800 pt-1">
               <span>Sisa dari pemasukan</span>
-              <span className={income - all.expense >= 0 ? "text-green-400" : "text-red-400"}>
-                {formatRupiah(income - all.expense)} ({fmtPct(pct(income - all.expense, income))})
+              <span className={diff >= 0 ? "text-green-400" : "text-red-400"}>
+                {formatRupiah(diff)} ({fmtPct(pct(diff, income))})
               </span>
             </div>
           </div>

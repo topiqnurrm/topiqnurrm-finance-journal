@@ -69,6 +69,18 @@ try {
 } catch {
   /* config tidak ditemukan: tanpa aturan "bulan pertama" */
 }
+if (!ARCHIVE_FIRST) {
+  ARCHIVE_FIRST = [...months].sort()[0];
+  console.warn(
+    `\n⚠️  ARCHIVE_FIRST tidak ditemukan di lib/archive/config.ts. Sementara dipakai bulan terkecil yang kamu arsipkan: ${ARCHIVE_FIRST}.\n` +
+      `    Tambahkan baris ini di lib/archive/config.ts:  export const ARCHIVE_FIRST = "${ARCHIVE_FIRST}";\n`
+  );
+} else if ([...months].sort()[0] !== ARCHIVE_FIRST && months.includes(ARCHIVE_FIRST) === false) {
+  console.warn(
+    `\n⚠️  Bulan pertama arsip di config.ts adalah ${ARCHIVE_FIRST}, tapi bulan itu tidak ada di perintah ini.\n` +
+      `    Aset / pengingat lama (sebelum ${ARCHIVE_FIRST}) hanya ikut kalau ${ARCHIVE_FIRST} diarsipkan.\n`
+  );
+}
 const readRows = (sheet) =>
   XLSX.utils.sheet_to_json(wb.Sheets[sheet], { header: 1, raw: true }).slice(1).filter((r) => r.length && r[0]);
 const txRows = readRows("Transaksi");
