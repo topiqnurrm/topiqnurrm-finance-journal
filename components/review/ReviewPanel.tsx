@@ -15,6 +15,7 @@ import {
 import { getAmountDisplay } from "@/lib/utils/finance";
 import { AMOUNT_TONE_CLASS } from "@/components/ui/amountTone";
 import AuditLegend, { auditBorder } from "@/components/ui/AuditLegend";
+import { exportReviewToExcel } from "@/lib/utils/export-review";
 import ReviewEditForm from "./ReviewEditForm";
 import { ReviewItem } from "./types";
 
@@ -143,6 +144,34 @@ export default function ReviewPanel({ isOwner }: Props) {
     setCategory("all");
     setFrom("");
     setTo("");
+  }
+
+  // Label kategori yang sedang dipilih (untuk sheet Ringkasan di Excel)
+  function selectedCategoryLabel() {
+    if (category === "all") return "Semua kategori";
+    if (category === "tx:carryover:all") return "Sisa Dibawa ke Bulan Depan";
+    const all = [...expenseOptions, ...incomeOptions, ...withdrawalOptions, ...journalOptions];
+    return all.find((o) => o.value === category)?.label ?? category;
+  }
+
+  // Export SEMUA hasil filter (semua halaman), bukan hanya yang tampil di layar
+  function handleExport() {
+    if (filtered.length === 0 || invalidRange) return;
+    try {
+      exportReviewToExcel(filtered, {
+        search,
+        kind,
+        categoryLabel: selectedCategoryLabel(),
+        from,
+        to,
+        showChecked,
+        auditDate: auditDate ?? null,
+        includeOld,
+      });
+    } catch (err) {
+      console.error(err);
+      window.alert("Gagal membuat file Excel, coba lagi.");
+    }
   }
 
   function handleEdit(it: ReviewItem) {
@@ -419,6 +448,16 @@ export default function ReviewPanel({ isOwner }: Props) {
           </button>
         )}
       </div>
+
+      {/* Export Excel sesuai filter yang dipilih */}
+      <button
+        type="button"
+        onClick={handleExport}
+        disabled={loading || filtered.length === 0 || invalidRange}
+        className="w-full rounded-md bg-green-700 py-2 text-sm font-medium text-white hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        Export Excel ({filtered.length} hasil sesuai filter)
+      </button>
 
       {/* Daftar */}
       {loading ? null : filtered.length === 0 ? (
