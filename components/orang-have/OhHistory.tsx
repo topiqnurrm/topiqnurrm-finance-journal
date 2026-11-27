@@ -6,6 +6,7 @@ import { formatRupiah } from "@/lib/utils/currency";
 import { OhHistoryKind, buildHistory, monthLabelLong } from "@/lib/orang-have/calc";
 import { OhProofKind } from "@/lib/orang-have/config";
 import OhProofLink from "./OhProofLink";
+import OhPager, { usePaged } from "./OhPager";
 
 interface Props {
   members: (OhMember & { id: string })[];
@@ -63,6 +64,8 @@ export default function OhHistory({ members, payments, expenses, loans }: Props)
     [all, filter, month]
   );
 
+  const pg = usePaged(shown, `${filter}|${month}`);
+
   const masuk = shown.filter((i) => i.delta > 0).reduce((s, i) => s + i.delta, 0);
   const keluar = shown.filter((i) => i.delta < 0).reduce((s, i) => s + i.delta, 0);
   const saldoAkhir = all.length ? all[all.length - 1].balance : 0;
@@ -84,7 +87,7 @@ export default function OhHistory({ members, payments, expenses, loans }: Props)
         </div>
       </div>
 
-      <div className="min-w-0 space-y-3 rounded-xl border border-neutral-800 bg-neutral-900 p-4">
+      <div ref={pg.topRef} className="min-w-0 scroll-mt-4 space-y-3 rounded-xl border border-neutral-800 bg-neutral-900 p-4">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-sm font-semibold text-white">History keseluruhan</h2>
           <p className="text-xs text-neutral-500">{shown.length} catatan</p>
@@ -120,7 +123,7 @@ export default function OhHistory({ members, payments, expenses, loans }: Props)
         {shown.length === 0 ? (
           <p className="text-sm text-neutral-500">Belum ada catatan.</p>
         ) : (
-          shown.map((i) => (
+          pg.pageItems.map((i) => (
             <div key={i.key} className="space-y-1 border-t border-neutral-800 pt-2">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -145,6 +148,7 @@ export default function OhHistory({ members, payments, expenses, loans }: Props)
             </div>
           ))
         )}
+        <OhPager {...pg} />
       </div>
     </div>
   );

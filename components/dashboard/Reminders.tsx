@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useReminders } from "@/lib/hooks/useReminders";
 import { isArchivedId } from "@/lib/archive";
@@ -81,6 +81,64 @@ function formatDate(dateStr: string) {
     month: "short",
     year: "numeric",
   });
+}
+
+// ===== Pagination: maksimal 10 pengingat per halaman =====
+const PAGE_SIZE = 10;
+
+function usePaged<T>(items: T[]) {
+  const [page, setPage] = useState(1);
+  const topRef = useRef<HTMLDivElement | null>(null);
+  const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const current = Math.min(page, totalPages); // data berkurang -> jangan melewati halaman terakhir
+  const start = (current - 1) * PAGE_SIZE;
+  return {
+    topRef,
+    pageItems: items.slice(start, start + PAGE_SIZE),
+    page: current,
+    totalPages,
+    total: items.length,
+    start,
+    goTo(n: number) {
+      setPage(Math.min(Math.max(1, n), totalPages));
+      topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    },
+  };
+}
+
+function Pager({
+  page,
+  totalPages,
+  total,
+  start,
+  goTo,
+}: {
+  page: number;
+  totalPages: number;
+  total: number;
+  start: number;
+  goTo: (n: number) => void;
+}) {
+  if (total <= PAGE_SIZE) return null;
+  const btn = "rounded-md bg-neutral-800 px-3 py-1 text-xs text-neutral-200 hover:bg-neutral-700 disabled:opacity-40";
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+      <p className="text-xs text-neutral-500">
+        {start + 1}–{Math.min(start + PAGE_SIZE, total)} dari {total}
+      </p>
+      <div className="flex items-center gap-2">
+        <button type="button" onClick={() => goTo(page - 1)} disabled={page <= 1} className={btn}>
+          ‹ Sebelumnya
+        </button>
+        <span className="text-xs text-neutral-400">
+          {page} / {totalPages}
+        </span>
+        <button type="button" onClick={() => goTo(page + 1)} disabled={page >= totalPages} className={btn}>
+          Berikutnya ›
+        </button>
+      </div>
+    </div>
+  );
 }
 
 export default function Reminders() {
@@ -172,6 +230,9 @@ export default function Reminders() {
       .sort((x, y) => y.dueDate.localeCompare(x.dueDate));
     return { active: a, finished: f };
   }, [reminders]);
+
+  const activePg = usePaged(active);
+  const donePg = usePaged(finished);
 
   const urgentCount = active.filter((r) => daysUntil(r.dueDate, today) <= 3).length;
 
@@ -325,7 +386,10 @@ export default function Reminders() {
       ) : active.length === 0 ? (
         <p className="text-sm text-neutral-600">Tidak ada pengingat aktif.</p>
       ) : (
-        <div className="space-y-2">{active.map(renderItem)}</div>
+        <div ref={activePg.topRef} className="scroll-mt-4 space-y-2">
+          {activePg.pageItems.map(renderItem)}
+          <Pager {...activePg} />
+        </div>
       )}
 
       {finished.length > 0 && (
@@ -336,7 +400,12 @@ export default function Reminders() {
           >
             {showDone ? "Sembunyikan" : "Tampilkan"} yang selesai ({finished.length})
           </button>
-          {showDone && <div className="space-y-2">{finished.map(renderItem)}</div>}
+          {showDone && (
+            <div ref={donePg.topRef} className="scroll-mt-4 space-y-2">
+              {donePg.pageItems.map(renderItem)}
+              <Pager {...donePg} />
+            </div>
+          )}
         </div>
       )}
 

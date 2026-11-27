@@ -6,6 +6,7 @@ import { formatRupiah } from "@/lib/utils/currency";
 import { getLocalDateStr } from "@/lib/utils/date";
 import { isValidProofName } from "@/lib/orang-have/calc";
 import OhProofLink from "./OhProofLink";
+import OhPager, { usePaged } from "./OhPager";
 import { isOhArchivedId } from "@/lib/orang-have/archive";
 import { ohProofDir } from "@/lib/orang-have/config";
 
@@ -38,6 +39,8 @@ export default function OhLoans({ isOwner, members, loans, addLoan, editLoan, re
 
   const outstanding = loans.filter((l) => !l.repaidDate);
   const repaid = loans.filter((l) => l.repaidDate);
+  // belum lunas dulu, lalu yang sudah lunas; dibagi per halaman (maks. 15)
+  const pg = usePaged([...outstanding, ...repaid]);
   const outstandingTotal = outstanding.reduce((s, l) => s + l.amount, 0);
 
   function resetForm() {
@@ -248,7 +251,7 @@ export default function OhLoans({ isOwner, members, loans, addLoan, editLoan, re
         </p>
       </div>
 
-      <div className="min-w-0 space-y-3 rounded-xl border border-neutral-800 bg-neutral-900 p-4">
+      <div ref={pg.topRef} className="min-w-0 scroll-mt-4 space-y-3 rounded-xl border border-neutral-800 bg-neutral-900 p-4">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-sm font-semibold text-white">Pinjaman</h2>
           {isOwner && !showForm && (
@@ -350,8 +353,8 @@ export default function OhLoans({ isOwner, members, loans, addLoan, editLoan, re
         )}
 
         {loans.length === 0 ? <p className="text-sm text-neutral-500">Belum ada pinjaman.</p> : null}
-        {outstanding.map(renderLoan)}
-        {repaid.map(renderLoan)}
+        {pg.pageItems.map(renderLoan)}
+        <OhPager {...pg} />
       </div>
     </div>
   );

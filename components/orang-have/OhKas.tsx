@@ -7,6 +7,7 @@ import { getLocalDateStr } from "@/lib/utils/date";
 import { OH_PAYOUT_LABEL } from "@/lib/orang-have/config";
 import { isAudit, isValidProofName, kasEntryDelta, kasSummary, poolSummary } from "@/lib/orang-have/calc";
 import OhProofLink from "./OhProofLink";
+import OhPager, { usePaged } from "./OhPager";
 import { isOhArchivedId } from "@/lib/orang-have/archive";
 import { ohProofDir } from "@/lib/orang-have/config";
 
@@ -27,6 +28,7 @@ export default function OhKas({ isOwner, members, payments, expenses, loans, add
   const kas = kasSummary(payments, expenses, loans, members.length);
   const pool = poolSummary(payments, kas.balance, loans);
   const auditNet = kas.auditIn - kas.auditOut;
+  const pg = usePaged(expenses);
 
   const [editing, setEditing] = useState<Expense | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -151,7 +153,7 @@ export default function OhKas({ isOwner, members, payments, expenses, loans, add
         <p className="mt-1 text-xs text-neutral-600">Saldo kas dibagi rata {members.length} anggota, dibulatkan ke bawah</p>
       </div>
 
-      <div className="min-w-0 space-y-3 rounded-xl border border-neutral-800 bg-neutral-900 p-4">
+      <div ref={pg.topRef} className="min-w-0 scroll-mt-4 space-y-3 rounded-xl border border-neutral-800 bg-neutral-900 p-4">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-sm font-semibold text-white">Pengeluaran & audit kas</h2>
           {isOwner && !showForm && (
@@ -292,7 +294,7 @@ export default function OhKas({ isOwner, members, payments, expenses, loans, add
         {expenses.length === 0 ? (
           <p className="text-sm text-neutral-500">Belum ada catatan kas.</p>
         ) : (
-          expenses.map((e) => (
+          pg.pageItems.map((e) => (
             <div key={e.id} className="flex items-start justify-between gap-3 border-t border-neutral-800 pt-2">
               <div className="min-w-0">
                 <p className="break-words text-sm text-white">
@@ -335,6 +337,7 @@ export default function OhKas({ isOwner, members, payments, expenses, loans, add
             </div>
           ))
         )}
+        <OhPager {...pg} />
       </div>
     </div>
   );
